@@ -10,19 +10,14 @@ class State(object):
     Represent state of a random variable obeys Gaussian Distribution
     """
 
-    def __init__(self, mean:np.ndarray = None, covariance:np.ndarray = None, obj_type:str = None, empty_constructor=True):
+    def __init__(self, mean: np.ndarray = None, covariance: np.ndarray = None, obj_type: str = '', empty_constructor=True):
         if not empty_constructor:
             assert mean.shape[1] == 1, 'mean is not a vector: mean.shape = {}'.format(mean.shape)
             assert mean.shape[0] == covariance.shape[0], \
                 'Input error, incompatible dimension: mean.shape ={}, covariance.shape = {}'.format(mean.shape, covariance.shape)
-            self.x = mean
-            self.P = covariance
-            self.obj_type = obj_type
-        else:
-            # no argument constructor
-            self.x = None
-            self.P = None
-            self.obj_type = ''
+        self.x = mean
+        self.P = covariance
+        self.obj_type = obj_type
 
     def __repr__(self):
         return '<State Class \n class {} \n x = {} \n P = {}>'.format(self.obj_type, self.x.squeeze(), self.P)
