@@ -3,26 +3,29 @@ from scipy.stats import multivariate_normal
 from typing import List
 
 from utils import normalize_log_weights
-
+from object_detection import ObjectDetection
 
 class State(object):
     """
     Represent state of a random variable obeys Gaussian Distribution
     """
-    def __init__(self, mean=None, covariance=None, empty_constructor=True):
+
+    def __init__(self, mean:np.ndarray = None, covariance:np.ndarray = None, obj_type:str = None, empty_constructor=True):
         if not empty_constructor:
             assert mean.shape[1] == 1, 'mean is not a vector: mean.shape = {}'.format(mean.shape)
             assert mean.shape[0] == covariance.shape[0], \
                 'Input error, incompatible dimension: mean.shape ={}, covariance.shape = {}'.format(mean.shape, covariance.shape)
             self.x = mean
             self.P = covariance
+            self.obj_type = obj_type
         else:
             # no argument constructor
             self.x = None
             self.P = None
+            self.obj_type = ''
 
     def __repr__(self):
-        return 'state: x = {}\n P = {}'.format(self.x, self.P)
+        return '<State Class \n class {} \n x = {} \n P = {}>'.format(self.obj_type, self.x.squeeze(), self.P)
 
 
 class GaussianDensity(object):
@@ -48,10 +51,11 @@ class GaussianDensity(object):
         self.R = R
         self.gating_size = gating_size
 
-    def predict(self, state:State) -> State:
+    def predict(self, state: State) -> State:
         predicted = State()
         predicted.x = self.F @ state.x
         predicted.P = self.F @ state.P @ self.F.transpose()
+        predicted.obj_type = state.obj_type
         return predicted
 
     def update(self, state: State, z: np.ndarray) -> State:
@@ -84,7 +88,7 @@ class GaussianDensity(object):
         mean = self.H @ state.x
         return multivariate_normal.logpdf(z.squeeze(), mean=mean.squeeze(), cov=S)
 
-    def ellipsoidal_gating(self, state:State, measurements: List[np.ndarray]) -> List[int]:
+    def ellipsoidal_gating(self, state:State, measurements: List[ObjectDetection]) -> List[int]:
         """
         Perform gating to eliminate irrelevant (low likelihood) measurements
         :param state:
@@ -97,8 +101,9 @@ class GaussianDensity(object):
         z_mean = self.H @ state.x
 
         measurements_in_gate = []
-        for ix, z in enumerate(measurements):
-            innov = z - z_mean  # innovation vector
+        for ix, meas in enumerate(measurements):
+            if meas.obj_type is not state.obj_type: continue  # skip measurements indicate different class
+            innov = meas.z - z_mean  # innovation vector
             d = innov.transpose() @ inv_S @ innov
             if d < self.gating_size: measurements_in_gate.append(ix)
 
@@ -108,7 +113,7 @@ class GaussianDensity(object):
         """
         Approximate a Gaussian Mixture parameterized by a list of states and a list of weights by 1 single Gaussian
         :param states:
-        :param weights: in log domain
+        :param log_weights: in log domain
         :param is_unnormalized: True if log_weights are unnormalized
         :return:
         """
@@ -124,4 +129,43 @@ class GaussianDensity(object):
 
         return merged
 
+    def mixture_reduction(self, log_weights: List[float], states: List[State], threshold: float) -> (List[float], List[State]):
+        """
+        Perform greedy merging to reduce the number of Gaussian components for a Gaussian mixture density
+        :param log_weights: unnormalized weights in log domain
+        :param states:
+        :return: a new mixture with less components
+        """
+        if len(log_weights) == 1:
+            return log_weights, states
+
+        new_log_weights = []
+        new_states = []
+
+        while states:
+            # find the component with the highest weight
+            idx_max_weight = np.argmax(log_weights).item()
+            inv_P = np.linalg.inv(states[idx_max_weight].P)
+            idx_to_merge, log_weights_to_merge, states_to_merge = [], [], []
+            for i, state in enumerate(states):
+                # find Mahalanobis distance to state with max weight
+                diff = state.x - states[idx_max_weight].x
+                d = diff.transpose() @ inv_P @ diff
+                if d < threshold:
+                    idx_to_merge.append(i)
+                    log_weights_to_merge.append(log_weights[i])
+                    states_to_merge.append(state)
+
+            # perform moment matching for states that close to state with max weights
+            norm_log_w, log_sum_w = normalize_log_weights(log_weights_to_merge)
+            merged_state = self.moment_matching(states_to_merge, norm_log_w, is_unnormalized=False)
+            new_log_weights.append(log_sum_w)
+            new_states.append(merged_state)
+
+            # remove merged states from original states
+            for i in reversed(idx_to_merge):
+                del states[i]
+                del log_weights[i]
+
+        return new_log_weights, new_states
 
