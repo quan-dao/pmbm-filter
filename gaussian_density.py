@@ -27,7 +27,7 @@ class GaussianDensity(object):
     """
     Hold the functionality of Kalman Filter with linear dynamic & mesurement
     """
-    def __init__(self, state_dim: int, meas_dim: int, F: np.ndarray, Q: np.ndarray, H: np.ndarray, R: np.ndarray, gating_size: float):
+    def __init__(self, state_dim: int, meas_dim: int, F: np.ndarray, Q: np.ndarray, H: np.ndarray, R: np.ndarray):
         assert F.shape[0] == state_dim, \
             'Incompatible dimension (expect equal): F.shape[0] = {}, state_dim = {}'.format(F.shape[0], state_dim)
         assert F.shape[0] == Q.shape[0], \
@@ -44,7 +44,6 @@ class GaussianDensity(object):
         self.Q = Q
         self.H = H
         self.R = R
-        self.gating_size = gating_size
 
     def predict(self, state: State) -> State:
         predicted = State()
@@ -83,11 +82,12 @@ class GaussianDensity(object):
         mean = self.H @ state.x
         return multivariate_normal.logpdf(z.squeeze(), mean=mean.squeeze(), cov=S)
 
-    def ellipsoidal_gating(self, state:State, measurements: List[ObjectDetection]) -> List[int]:
+    def ellipsoidal_gating(self, state:State, measurements: List[ObjectDetection], gating_size: float) -> List[int]:
         """
         Perform gating to eliminate irrelevant (low likelihood) measurements
         :param state:
         :param measurements: List of measurement vectors
+        :param gating_size:
         :return: List of index of measurements inside the gate of this this state
         """
         S = self.H @ state.P @ self.H.transpose() + self.R  # innovation covariance
@@ -100,7 +100,7 @@ class GaussianDensity(object):
             if meas.obj_type is not state.obj_type: continue  # skip measurements indicate different class
             innov = meas.z - z_mean  # innovation vector
             d = innov.transpose() @ inv_S @ innov
-            if d < self.gating_size: measurements_in_gate.append(ix)
+            if d < gating_size: measurements_in_gate.append(ix)
 
         return measurements_in_gate
 
@@ -112,6 +112,10 @@ class GaussianDensity(object):
         :param is_unnormalized: True if log_weights are unnormalized
         :return:
         """
+        # early stop if Lists of states contains 1 elements only
+        if len(states) == 1:
+            return states[0]
+
         if is_unnormalized:
             log_weights, _ = normalize_log_weights(log_weights)
         weights = np.exp(log_weights)

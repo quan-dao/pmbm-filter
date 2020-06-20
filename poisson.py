@@ -4,24 +4,45 @@ from typing import List
 from gaussian_density import State, GaussianDensity
 from object_detection import ObjectDetection
 from target import Target
+from utils import normalize_log_weights
+from single_target_hypothesis import SingleTargetHypothesis
 
 
 class PointPoissonProcess(object):
     """
     Represent undetected targets
     """
-    def __init__(self, state_dim: float, measurement_dim: float, prob_survival: float, prob_detection: float, density_hdl: GaussianDensity,
-                 birth_weight: float, prune_threshold: float, merge_threshold: float):
+    def __init__(self,
+                 state_dim: float,
+                 measurement_dim: float,
+                 prob_survival: float,
+                 prob_detection: float,
+                 density_hdl: GaussianDensity,
+                 birth_weight: float,
+                 birth_gating_size: float,
+                 prune_threshold: float,
+                 merge_threshold: float,
+                 clutter_intensity: float,
+                 current_time_step: int):
+        #TODO: Find a place to update PPP's current time step
         self.state_dim = state_dim
         self.measurement_dim = measurement_dim
         self.prob_survival = prob_survival
         self.prob_detection = prob_detection
         self.density_hdl = density_hdl  # a handler to PMBM's GaussianDensity for KF functionality
         self.birth_weight = birth_weight  # suggestion log(5e-3)
+        self.birth_gating_size = birth_gating_size  # to check a measurement is close to a component of PPP's intensity
         self.prune_threshold = prune_threshold  # in log domain
         self.merge_threshold = merge_threshold  # size of mahalanobis distance to consider 2 gaussian are close
         self.intensity = []  # Dict{w: log_w, s: State}
         self.target_id_to_give = 0  # birth only comes from PPP, this number defines each target id at its birth
+        self.clutter_intensity = clutter_intensity
+        self.current_time_step = current_time_step
+
+    def get_new_target_id(self) -> int:
+        new_target_id = self.target_id_to_give
+        self.target_id_to_give += 1
+        return new_target_id
 
     def give_birth(self, measurements: List[ObjectDetection], birth_per_meas=3) -> None:
         """
@@ -84,4 +105,44 @@ class PointPoissonProcess(object):
         TODO: Perform update for targets detected for the first time
         :return: a list new tracks spawned by this list of measurements
         """
+        gating_matrix = np.zeros((len(self.intensity), len(measurements)))  # gating_matrix[i, j] = 1 if meas j in gate of component i
+        for i_com, component in enumerate(self.intensity):
+            meas_in_gate = self.density_hdl.ellipsoidal_gating(component['s'], measurements, self.birth_gating_size)
+            gating_matrix[i_com, meas_in_gate] = 1
 
+        # for each measurement spawn a new track (i.e. target)
+        new_targets = []
+        for j_meas, meas in enumerate(measurements):
+            assert np.sum(gating_matrix[:, j_meas]) > 0, 'Measurement {} is not in gate of any poisson componenets'.format(j_meas)
+            # get index of poisson components which has this measurement in its gate
+            all_indices = np.arange(0, len(self.intensity))
+            in_gate_of_components = all_indices[gating_matrix[:, j_meas] == 1]
+            # compute w_i - unnormalized weight of components of new target mixture
+            log_w_unnorm = [self.intensity[k]['w'] + self.density_hdl.log_likelihood(self.intensity[k]['s'], meas.z)
+                            for k in in_gate_of_components]
+            # compute e
+            log_w, log_sum_w_unnorm = normalize_log_weights(log_w_unnorm)
+            log_e = np.log(self.prob_detection) + log_sum_w_unnorm
+            # compute rho
+            rho = np.exp(log_e) + self.clutter_intensity
+            # prob of existence of the STH in this new target
+            prob_existence = 1.0 - self.clutter_intensity / rho
+            # find mixuture representing the state of the STH in this new target
+            mixture_states = [self.density_hdl.update(self.intensity[k]['s'], meas.z) for k in in_gate_of_components]
+            # approximate this mixture by a single Gaussian
+            merged = self.density_hdl.moment_matching(mixture_states, log_w, is_unnormalized=False)
+
+            # create STH & the associated track
+            first_STH = SingleTargetHypothesis(log_weight=np.log(rho),
+                                               prob_existence=prob_existence,
+                                               state=merged,
+                                               assoc_meas_idx=j_meas,
+                                               time_of_birth=self.current_time_step)
+            target = Target(target_id=self.get_new_target_id(),
+                            obj_type=meas.obj_type,
+                            time_of_birth=self.current_time_step,
+                            first_single_target_hypo=first_STH,
+                            density_hdl=self.density_hdl)
+            new_targets.append(target)
+
+        return new_targets
