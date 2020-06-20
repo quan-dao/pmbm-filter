@@ -24,7 +24,7 @@ class PointPoissonProcess(object):
                  merge_threshold: float,
                  clutter_intensity: float,
                  current_time_step: int):
-        #TODO: Find a place to update PPP's current time step
+        #TODO: Find a place in PMBM to update PPP's current time step
         self.state_dim = state_dim
         self.measurement_dim = measurement_dim
         self.prob_survival = prob_survival
@@ -141,6 +141,8 @@ class PointPoissonProcess(object):
             target = Target(target_id=self.get_new_target_id(),
                             obj_type=meas.obj_type,
                             time_of_birth=self.current_time_step,
+                            prob_survival=self.prob_survival,
+                            prob_detection=self.prob_detection,
                             first_single_target_hypo=first_STH,
                             density_hdl=self.density_hdl)
             new_targets.append(target)

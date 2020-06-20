@@ -26,6 +26,15 @@ def normalize_log_weights(log_weights: List[float]) -> (List[float], float):
     return log_weights.tolist(), log_sum
 
 
+def put_in_range(angle):
+    """
+    Put an angle in range of [-pi, pi]
+    """
+    while angle <= -np.pi: angle += 2*np.pi
+    while angle > np.pi: angle -= 2*np.pi
+    return angle
+
+
 if __name__ == '__main__':
     # test normalize_log_weights
     log_w = [-5.3551,   12.7862,    5.3548,    8.6605,    5.1929]

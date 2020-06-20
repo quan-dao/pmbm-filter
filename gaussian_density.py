@@ -20,7 +20,7 @@ class State(object):
         self.obj_type = obj_type
 
     def __repr__(self):
-        return '<State Class \n class {} \n x = {} \n P = {}>'.format(self.obj_type, self.x.squeeze(), self.P)
+        return '<State Class \n obj_type {} \n x = {}>'.format(self.obj_type, self.x.squeeze())
 
 
 class GaussianDensity(object):
@@ -46,6 +46,7 @@ class GaussianDensity(object):
         self.R = R
 
     def predict(self, state: State) -> State:
+        # TODO: put predicted yaw in [-pi, pi]
         predicted = State()
         predicted.x = self.F @ state.x
         predicted.P = self.F @ state.P @ self.F.transpose()
@@ -59,6 +60,7 @@ class GaussianDensity(object):
         :param z: measurement vector - shape [meas_dim, 1]
         :return: updated state
         """
+        # TODO: put updated yaw in [-pi, pi]
         assert z.shape[1] == 1, 'measurement is not a column vector: z.shape = {}'.format(z.shape)
         psi = state.P @ self.H.transpose()
         S = self.H @ state.P @ self.H.transpose() + self.R  # innovation covariance
