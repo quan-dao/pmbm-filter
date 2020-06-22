@@ -21,6 +21,7 @@ class SingleTargetHypothesis(object):
         self.single_id = single_target_hypo_id
         self.time_or_birth = time_of_birth
         self.cost = cost
+        self.children = {}  # STHs created by associating this STH with diffrenent measurement, {meas_idx: STH}
 
     def __repr__(self):
         return '\t<SingleTargetHypo |SID: {}, \tt_brith: {}, \tlog_w: {}, \tcost: {}, \tP_exist: {}, \tassoc_meas: {}, \tX:{}>'.format(

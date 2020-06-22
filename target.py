@@ -19,7 +19,8 @@ class Target(object):
                  prob_detection: float,
                  first_single_target_hypo: SingleTargetHypothesis,
                  density_hdl: GaussianDensity,
-                 gating_size: float = 5.0):
+                 gating_size: float = 5.0,
+                 prune_prob_existence: float = 1e-3):
         self.target_id = target_id  # a unique number to distinguish this target with others
         self.obj_type = obj_type
         self.time_of_birth = time_of_birth  # time step when this target is born
@@ -28,6 +29,7 @@ class Target(object):
         self.density_hdl = density_hdl  # handler to PMBM's Gaussian density
         self.current_time_step = time_of_birth  # TODO: Find a place in PMBM to update current time step
         self.gating_size = gating_size
+        self.prune_prob_existence = prune_prob_existence
         self.single_id_to_give = 0
         # set ID for 1st single target hypo & store it
         first_single_target_hypo.single_id = self.get_new_STH_id()  # TODO: in PMBM reset_single_id_to_give for all targets
@@ -67,7 +69,6 @@ class Target(object):
         Reference: Algorithm 2.3 (chalmer thesis)
         :param measurements: list of all measurements (not gated yet)
         """
-        new_single_target_hypotheses = []
         for single_target in self.single_target_hypotheses:
             # create Misdetection hypothesis
             mis_state = single_target.state
@@ -83,7 +84,7 @@ class Target(object):
                                               single_target_hypo_id=self.get_new_STH_id(),
                                               time_of_birth=self.current_time_step,
                                               cost=mis_cost)
-            new_single_target_hypotheses.append(mis_hypo)
+            single_target.children[-1] = mis_hypo
 
             # create Detection hypotheses
             meas_in_gate = self.density_hdl.ellipsoidal_gating(single_target.state, measurements, self.gating_size)
@@ -99,13 +100,15 @@ class Target(object):
                                                      single_target_hypo_id=self.get_new_STH_id(),
                                                      time_of_birth=self.current_time_step,
                                                      cost=detect_cost)
-                new_single_target_hypotheses.append(detect_hypo)
-
+                single_target.children[j_meas] = detect_hypo
         # replace current set of STH with new STH
-        self.single_target_hypotheses = new_single_target_hypotheses
+        # TODO: do self.single_target_hypotheses = new_single_target_hypotheses in PMBM after forming gloabl hypothese
 
     def prune(self) -> None:
         """
-        TODO: Prune STH whose prob_existence below a threshold
-        :return:
+        Prune STH whose prob_existence below a threshold
         """
+        sth_to_prune = [i for i, single_target in enumerate(self.single_target_hypotheses)
+                        if single_target.prob_existence < self.prune_prob_existence]
+        for i in reversed(sth_to_prune):
+            del self.single_target_hypotheses[i]

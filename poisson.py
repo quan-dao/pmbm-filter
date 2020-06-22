@@ -102,7 +102,7 @@ class PointPoissonProcess(object):
 
     def create_new_targets(self, measurements: List[ObjectDetection]) -> List[Target]:
         """
-        TODO: Perform update for targets detected for the first time
+        Perform update for targets detected for the first time
         :return: a list new tracks spawned by this list of measurements
         """
         gating_matrix = np.zeros((len(self.intensity), len(measurements)))  # gating_matrix[i, j] = 1 if meas j in gate of component i
@@ -137,7 +137,8 @@ class PointPoissonProcess(object):
                                                prob_existence=prob_existence,
                                                state=merged,
                                                assoc_meas_idx=j_meas,
-                                               time_of_birth=self.current_time_step)
+                                               time_of_birth=self.current_time_step,
+                                               cost=np.log(rho))
             target = Target(target_id=self.get_new_target_id(),
                             obj_type=meas.obj_type,
                             time_of_birth=self.current_time_step,
