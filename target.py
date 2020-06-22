@@ -32,7 +32,7 @@ class Target(object):
         self.prune_prob_existence = prune_prob_existence
         self.single_id_to_give = 0
         # set ID for 1st single target hypo & store it
-        first_single_target_hypo.single_id = self.get_new_STH_id()  # TODO: in PMBM reset_single_id_to_give for all targets
+        first_single_target_hypo.single_id = self.get_new_STH_id()
         self.single_target_hypotheses = [first_single_target_hypo]  # store all STHs at this current time step (not the whole tree)
 
     def __repr__(self):
@@ -70,6 +70,8 @@ class Target(object):
         :param measurements: list of all measurements (not gated yet)
         """
         for single_target in self.single_target_hypotheses:
+            # "update" populates STH's children by associating a STH from predict step to new measurements
+            assert single_target.children == {}, 'STH children is not cleaned up'
             # create Misdetection hypothesis
             mis_state = single_target.state
             mis_log_w = single_target.log_weight + \
@@ -101,10 +103,14 @@ class Target(object):
                                                      time_of_birth=self.current_time_step,
                                                      cost=detect_cost)
                 single_target.children[j_meas] = detect_hypo
+
+        # reset single_id_to_give so that next time step single_target_id starts from 0
+        self.reset_single_id_to_give()
+
         # replace current set of STH with new STH
         # TODO: do self.single_target_hypotheses = new_single_target_hypotheses in PMBM after forming gloabl hypothese
 
-    def prune(self) -> None:
+    def prune_single_target_hypo(self) -> None:
         """
         Prune STH whose prob_existence below a threshold
         """

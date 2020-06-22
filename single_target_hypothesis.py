@@ -33,3 +33,11 @@ class SingleTargetHypothesis(object):
             self.assoc_meas_idx,
             self.state.x
         )
+
+    def get_id(self):
+        assert self.single_id is not None, 'SingleTargetHypothesis ID is not initialized'
+        return self.single_id
+
+    def get_prob_existence(self):
+        assert self.prob_existence is not None, 'SingleTargetHypothesis prob_existence is not initialized'
+        return self.prob_existence

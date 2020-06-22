@@ -13,8 +13,8 @@ class PointPoissonProcess(object):
     Represent undetected targets
     """
     def __init__(self,
-                 state_dim: float,
-                 measurement_dim: float,
+                 state_dim: int,
+                 measurement_dim: int,
                  prob_survival: float,
                  prob_detection: float,
                  density_hdl: GaussianDensity,
