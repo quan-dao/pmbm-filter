@@ -34,7 +34,7 @@ def main():
         print('After Update\n', pmbm_filter)
         print('\n-----------------------------\n')
         # stop after 1 frame
-        if i_frame > 10:
+        if i_frame > 3:
             break
 
 

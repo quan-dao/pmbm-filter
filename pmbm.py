@@ -66,7 +66,7 @@ class PoissonMultiBernoulliMixture(object):
 
         # create cost for newly detected target
         for i_meas, new_target in enumerate(self.new_targets_pool):
-            cost_matrix[i_meas, num_of_targets + i_meas] = -new_target.single_target_hypotheses[0].cost  # new target only has 1 STH
+            cost_matrix[i_meas, num_of_targets + i_meas] = -new_target.single_target_hypotheses[0].cost  # new target only has 1 STH, there were a minus here
 
         return cost_matrix
 
@@ -116,11 +116,11 @@ class PoissonMultiBernoulliMixture(object):
                     detected_targets.append(target_id)
 
                 # add hypotheses of objects that is undetected, if prob of existence of this hypo above a threshold
-                for target_id, parent_sth_id in global_hypo.pairs_id:
-                    if target_id in detected_targets: continue  # this target is detected by a measurement, move on
-                    child_single_target = self.targets_pool[target_id].single_target_hypotheses[parent_sth_id].children[-1]  # -1 indicates miss hypothesis
-                    if child_single_target.get_prob_existence() > self.prune_single_hypothesis_existence:
-                        new_global_hypo.pairs_id.append((target_id, child_single_target.get_id()))
+                # for target_id, parent_sth_id in global_hypo.pairs_id:
+                #     if target_id in detected_targets: continue  # this target is detected by a measurement, move on
+                #     child_single_target = self.targets_pool[target_id].single_target_hypotheses[parent_sth_id].children[-1]  # -1 indicates miss hypothesis
+                #     if child_single_target.get_prob_existence() > self.prune_single_hypothesis_existence:
+                #         new_global_hypo.pairs_id.append((target_id, child_single_target.get_id()))
 
                 new_global_hypothese.append(new_global_hypo)
 
@@ -250,5 +250,5 @@ class PoissonMultiBernoulliMixture(object):
         TODO: estimate targets by choosing the global hypothese with highest weights
         :return:
         """
-        print('Chosen global hypothesis: ', self.global_hypotheses[0])
-
+        # print('Chosen global hypothesis: \n', self.global_hypotheses[0])
+        pass

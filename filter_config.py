@@ -7,9 +7,9 @@ class FilterConfig(object):
     def __init__(self,
                  state_dim: int,
                  measurement_dim: int,
-                 prob_survival: float = 0.9,
-                 prob_detection: float = 0.9,
-                 poisson_birth_weight: float = np.log(5e-3),
+                 prob_survival: float = 0.85,  # 0.85, 0.75 seems to work
+                 prob_detection: float = 0.99,  # 0.99, 0.95 seems to work
+                 poisson_birth_weight: float = np.log(1),  # 1, 0.5 seems to work
                  poisson_birth_gating_size: float = 11.0,
                  poisson_prune_threshold: float = -3,
                  poisson_merge_threshold: float = 2.0,
