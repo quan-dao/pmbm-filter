@@ -17,7 +17,7 @@ def normalize_log_weights(log_weights: List[float]) -> (List[float], float):
         log_sum_unnormalized = log_weights[0]
         # normalize
         log_weights[0] -= log_sum_unnormalized
-        return [log_weights], log_sum_unnormalized
+        return log_weights, log_sum_unnormalized
 
     log_weights = np.array(log_weights)
     arg_order = np.argsort(log_weights)  # ascending

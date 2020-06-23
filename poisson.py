@@ -127,7 +127,7 @@ class PointPoissonProcess(object):
             # prob of existence of the STH in this new target
             prob_existence = 1.0 - self.clutter_intensity / rho
             # find mixuture representing the state of the STH in this new target
-            mixture_states = [self.density_hdl.update(self.intensity[k]['s'], meas.z) for k in in_gate_of_components]
+            mixture_states = [self.density_hdl.update(self.intensity[k]['s'], meas) for k in in_gate_of_components]
             # approximate this mixture by a single Gaussian
             merged = self.density_hdl.moment_matching(mixture_states, log_w, is_unnormalized=False)
 

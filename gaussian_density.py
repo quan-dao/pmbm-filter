@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import multivariate_normal
 from typing import List
 
-from utils import normalize_log_weights
+from utils import normalize_log_weights, put_in_range
 from object_detection import ObjectDetection
 
 class State(object):
@@ -51,15 +51,18 @@ class GaussianDensity(object):
         predicted.x = self.F @ state.x
         predicted.P = self.F @ state.P @ self.F.transpose()
         predicted.obj_type = state.obj_type
+        # put predicted yaw in [-pi, pi]
+        predicted.x[2, 0] = put_in_range(predicted.x[2, 0])
         return predicted
 
-    def update(self, state: State, z: np.ndarray) -> State:
+    def update(self, state: State, measurement: ObjectDetection) -> State:
         """
         Perform update step of Kalman filter
         :param state:
         :param z: measurement vector - shape [meas_dim, 1]
         :return: updated state
         """
+        z = measurement.z
         # TODO: put updated yaw in [-pi, pi]
         assert z.shape[1] == 1, 'measurement is not a column vector: z.shape = {}'.format(z.shape)
         psi = state.P @ self.H.transpose()
@@ -69,6 +72,9 @@ class GaussianDensity(object):
         updated = State()
         updated.x = state.x + K @ (z - self.H @ state.x)
         updated.P = state.P - K @ psi.transpose()
+        updated.obj_type = measurement.obj_type
+        # put updated yaw in [-pi, pi]
+        updated.x[2, 0] = put_in_range(updated.x[2, 0])
         return updated
 
     def log_likelihood(self, state: State, z: np.ndarray) -> float:
@@ -84,7 +90,7 @@ class GaussianDensity(object):
         mean = self.H @ state.x
         return multivariate_normal.logpdf(z.squeeze(), mean=mean.squeeze(), cov=S)
 
-    def ellipsoidal_gating(self, state:State, measurements: List[ObjectDetection], gating_size: float) -> List[int]:
+    def ellipsoidal_gating(self, state: State, measurements: List[ObjectDetection], gating_size: float) -> List[int]:
         """
         Perform gating to eliminate irrelevant (low likelihood) measurements
         :param state:
@@ -99,7 +105,7 @@ class GaussianDensity(object):
 
         measurements_in_gate = []
         for ix, meas in enumerate(measurements):
-            if meas.obj_type is not state.obj_type: continue  # skip measurements indicate different class
+            if meas.obj_type != state.obj_type: continue  # skip measurements indicate different class
             innov = meas.z - z_mean  # innovation vector
             d = innov.transpose() @ inv_S @ innov
             if d < gating_size: measurements_in_gate.append(ix)
@@ -121,8 +127,13 @@ class GaussianDensity(object):
         if is_unnormalized:
             log_weights, _ = normalize_log_weights(log_weights)
         weights = np.exp(log_weights)
-
-        merged = State(mean=np.zeros((self.state_dim, 1)), covariance=np.zeros((self.state_dim, self.state_dim)), empty_constructor=False)
+        # get object type & ensure every state to be merged have the same object type
+        obj_type = states[0].obj_type
+        if len(states) > 1:
+            for state in states:
+                assert state.obj_type == obj_type, \
+                    'State to merge do not have the same object type: {}, expect {}'.format(state.obj_type, obj_type)
+        merged = State(np.zeros((self.state_dim, 1)), np.zeros((self.state_dim, self.state_dim)), obj_type, empty_constructor=False)
         for w, state in zip(weights, states):
             merged.x += w * state.x
         for w, state in zip(weights, states):

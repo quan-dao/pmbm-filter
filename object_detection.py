@@ -14,3 +14,6 @@ class ObjectDetection(object):
             assert z.shape[1] == 1, 'z must be a column vector, z.shape = {}'.format(z.shape)
             self.z = z
             self.obj_type = obj_type
+
+    def __repr__(self):
+        return '<ObjectDetection | Type: {}, \tz:{}>'.format(self.obj_type, self.z.squeeze())

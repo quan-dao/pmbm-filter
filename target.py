@@ -91,7 +91,7 @@ class Target(object):
             # create Detection hypotheses
             meas_in_gate = self.density_hdl.ellipsoidal_gating(single_target.state, measurements, self.gating_size)
             for j_meas in meas_in_gate:
-                updated_state = self.density_hdl.update(single_target.state, measurements[j_meas].z)
+                updated_state = self.density_hdl.update(single_target.state, measurements[j_meas])
                 log_w = single_target.log_weight + np.log(single_target.prob_existence * self.prob_detection) + \
                         self.density_hdl.log_likelihood(single_target.state, measurements[j_meas].z)
                 detect_cost = log_w - mis_cost

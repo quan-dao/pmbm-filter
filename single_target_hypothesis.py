@@ -24,14 +24,14 @@ class SingleTargetHypothesis(object):
         self.children = {}  # STHs created by associating this STH with diffrenent measurement, {meas_idx: STH}
 
     def __repr__(self):
-        return '\t<SingleTargetHypo |SID: {}, \tt_brith: {}, \tlog_w: {}, \tcost: {}, \tP_exist: {}, \tassoc_meas: {}, \tX:{}>'.format(
+        return '\t<SingleTargetHypo |SID: {}, \tt_brith: {}, \tlog_w: {}, \tcost: {}, \tP_exist: {}, \tassoc_meas: {}, \tX:{}>\n'.format(
             self.single_id,
             self.time_or_birth,
             self.log_weight,
             self.cost,
             self.prob_existence,
             self.assoc_meas_idx,
-            self.state.x
+            self.state.x.squeeze()
         )
 
     def get_id(self):

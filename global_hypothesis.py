@@ -1,12 +1,12 @@
 from typing import List, Tuple
 
-
 class GlobalHypothesis(object):
     """
     A global hypothesis is a List of (Track ID, Single Target Hypo ID)
     """
-    def __init__(self, pairs_id: List[Tuple[int, int]] = None):
-        self.pairs_id = pairs_id
+    def __init__(self, log_w: float = 0):
+        self.pairs_id : List[Tuple[int, int]] = []
+        self.log_weight = log_w
 
     def get_num_obj(self) -> int:
         """
@@ -17,4 +17,4 @@ class GlobalHypothesis(object):
         return len(self.pairs_id)
 
     def __repr__(self):
-        return '<GlobalHypo | {}>'.format(self.pairs_id)
+        return '<GlobalHypo | log_w: {}, {}>\n'.format(round(self.log_weight, 3), self.pairs_id)
