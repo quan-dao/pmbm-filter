@@ -27,12 +27,12 @@ class Target(object):
         self.prob_survival = prob_survival
         self.prob_detection = prob_detection
         self.density_hdl = density_hdl  # handler to PMBM's Gaussian density
-        self.current_time_step = time_of_birth  # TODO: Find a place in PMBM to update current time step
+        self.current_time_step = time_of_birth
         self.gating_size = gating_size
         self.prune_prob_existence = prune_prob_existence
         self.single_id_to_give = 0
         # set ID for 1st single target hypo & store it
-        first_single_target_hypo.single_id = self.get_new_STH_id()
+        first_single_target_hypo.single_id = 0
         self.single_target_hypotheses = [first_single_target_hypo]  # store all STHs at this current time step (not the whole tree)
 
     def __repr__(self):
@@ -106,9 +106,6 @@ class Target(object):
 
         # reset single_id_to_give so that next time step single_target_id starts from 0
         self.reset_single_id_to_give()
-
-        # replace current set of STH with new STH
-        # TODO: do self.single_target_hypotheses = new_single_target_hypotheses in PMBM after forming gloabl hypothese
 
     def prune_single_target_hypo(self) -> None:
         """

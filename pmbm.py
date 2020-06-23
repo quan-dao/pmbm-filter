@@ -8,9 +8,10 @@ from utils import INF, normalize_log_weights
 from poisson import PointPoissonProcess
 from filter_config import FilterConfig
 from gaussian_density import GaussianDensity
+from object_detection import ObjectDetection
+from single_target_hypothesis import SingleTargetHypothesis
 
 
-# TODO: find a place to merge new_targets_pool with targets_pool
 class PoissonMultiBernoulliMixture(object):
     def __init__(self,
                  config: FilterConfig,
@@ -84,6 +85,7 @@ class PoissonMultiBernoulliMixture(object):
         :param num_of_measurement:
         :return:
         """
+        assert len(self.global_hypotheses) > 0, 'global_hypotheses has not been initialized'
         # compute weight of all global hypotheses
         log_weights_unnorm = [self.compute_global_hypo_weight(global_hypo) for global_hypo in self.global_hypotheses]
         log_weights, _ = normalize_log_weights(log_weights_unnorm)
@@ -95,7 +97,9 @@ class PoissonMultiBernoulliMixture(object):
             murty_solver = Murty(cost_matrix)
             for iteration in range(murty_k):
                 ok, cost, column_for_meas = murty_solver.draw()
-                assert ok, 'Murty solver is not ok with cost matrix {}'.format(cost_matrix)
+                if not ok:
+                    'Murty solver is not ok with cost matrix {}'.format(cost_matrix)
+                    break
                 assert cost < INF, 'Optimal cost {} is too high'.format(cost)
                 column_for_meas = column_for_meas.tolist()
                 new_global_hypo = GlobalHypothesis()
@@ -122,19 +126,28 @@ class PoissonMultiBernoulliMixture(object):
 
     def prune_global_hypotheses(self):
         """
-        Prune newly created global hypotheses whose weight samller than a threshold
+        Prune newly created global hypotheses whose weight smaller than a threshold
         :return:
         """
         # only invoked after new global hypotheses are created
-        assert self.new_targets_pool == [], 'new_target_pool is not cleaned up after creating new global hypotheses'  # TODO: clean new_target_pool after createing new global hypotheses
+        assert self.new_targets_pool == [], 'new_target_pool is not cleaned up after creating new global hypotheses'
 
         # compute weight of all global hypotheses
         log_weights_unnorm = [self.compute_global_hypo_weight(global_hypo) for global_hypo in self.global_hypotheses]
         log_weights, _ = normalize_log_weights(log_weights_unnorm)
 
+        # prunning
         to_prune_hypo = [i for i, log_w in enumerate(log_weights) if log_w < self.prune_global_hypothesis_log_weight]
         for i_prune in reversed(to_prune_hypo):
             del self.global_hypotheses[i_prune]
+
+        # capping
+        if len(self.global_hypotheses) > self.desired_num_global_hypotheses:
+            log_weights_unnorm = [self.compute_global_hypo_weight(global_hypo) for global_hypo in self.global_hypotheses]
+            sorted_indicies = np.argsort(log_weights_unnorm)  # ascending order
+            sorted_indicies = sorted_indicies[::-1]  # flip sorted_indicies, to have descending order
+            kept_indicies = sorted_indicies[: self.desired_num_global_hypotheses]
+            self.global_hypotheses = [self.global_hypotheses[i] for i in kept_indicies]
 
     def recycle_targets(self):
         """
@@ -143,19 +156,90 @@ class PoissonMultiBernoulliMixture(object):
         """
         pass
 
-    def predict(self):
+    def predict(self, measurements: List[ObjectDetection]):
         """
-        TODO: perform predict for both Poisson and Multi Bernoulli Mixture
+        Perform predict for both Poisson and Multi Bernoulli Mixture
         :return:
         """
-        pass
+        assert self.new_targets_pool == [], 'new_target_pool is not cleaned up after creating new global hypotheses'
+        self.poisson.predict(measurements)  # birth process is also done here
+        for target in self.targets_pool:
+            target.predict()
 
-    def update(self):
+    def update(self, measurements: List[ObjectDetection]):
         """
-        TODO: perform update for both Poisson and Multi Bernoulli Mixture
+        Perform update for both Poisson and Multi Bernoulli Mixture
         :return:
         """
-        pass
+        # update for previously undetected target and stay undetected now
+        self.poisson.update()
+        # update for objects detected for the 1st time
+        self.new_targets_pool = self.poisson.create_new_targets(measurements)
+        # update for objects detected in the previous time step
+        for target in self.targets_pool:
+            target.update(measurements)
+        # create new global hypothesis
+        if len(self.global_hypotheses) == 0:
+            assert len(self.targets_pool) == 0, \
+                'In initialization phase, targets_pool has to be empty (current len: {})'.format(len(self.targets_pool))
+            # create first global hypothesis with newly detected objects
+            first_global_hypo = GlobalHypothesis()
+            for target in self.new_targets_pool:
+                target_id = target.target_id
+                sth_id = target.single_target_hypotheses[0].single_id
+                first_global_hypo.pairs_id.append((target_id, sth_id))
+            self.global_hypotheses.append(first_global_hypo)
+        else:
+            self.global_hypotheses = self.create_new_global_hypotheses(len(measurements))
+
+        # organize things in Poisson, Target, and PMBM to get ready for next time step
+        self.prepare_for_next_time_step()
+
+    def prepare_for_next_time_step(self):
+        """
+        Update miscellaneous thing of Poisson, Target, and PMBM to move on to next time step
+        """
+        # in Target, update single_target_hypotheses with all sth's children
+        for target in self.targets_pool:
+            new_single_target_hypotheses = []
+            for parent_sth in target.single_target_hypotheses:
+                for _, child_sth in parent_sth.children.items():
+                    new_single_target_hypotheses.append(child_sth)
+            target.single_target_hypotheses = new_single_target_hypotheses
+
+        # merge self.new_targets_pool & self.targets_pool, as in next time step current new_targets_pool is not new
+        old_targets_id = [target.target_id for target in self.targets_pool]
+        for new_target in self.new_targets_pool:
+            assert new_target.target_id not in old_targets_id, \
+                'new_target ID ({}) is in old_targets_id'.format(new_target.target_id)
+        self.targets_pool += self.new_targets_pool
+        # clean up new_targets_pool
+        self.new_targets_pool: List[Target] = []
+
+        # increment current_time_step & update the same in Poisson & Target
+        self.current_time_step += 1
+        self.poisson.current_time_step = self.current_time_step
+        for target in self.targets_pool:
+            target.current_time_step = self.current_time_step
+
+    def reduction(self):
+        """
+        Do all the pruning here
+        """
+        self.poisson.prune()
+        self.prune_global_hypotheses()
+        for target in self.targets_pool:
+            target.prune_single_target_hypo()
+
+    def run(self, measurements: List[ObjectDetection]):
+        """
+        Main program of PMBM
+        :return:
+        """
+        self.predict(measurements)
+        self.update(measurements)
+        self.reduction()
+        # TODO: invoke self.estimate_targets()
 
     def estimate_targets(self):
         """

@@ -24,7 +24,6 @@ class PointPoissonProcess(object):
                  merge_threshold: float,
                  clutter_intensity: float,
                  current_time_step: int):
-        #TODO: Find a place in PMBM to update PPP's current time step
         self.state_dim = state_dim
         self.measurement_dim = measurement_dim
         self.prob_survival = prob_survival
