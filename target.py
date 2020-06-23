@@ -33,7 +33,7 @@ class Target(object):
         self.single_id_to_give = 0
         # set ID for 1st single target hypo & store it
         first_single_target_hypo.single_id = 0
-        self.single_target_hypotheses = [first_single_target_hypo]  # store all STHs at this current time step (not the whole tree)
+        self.single_target_hypotheses = {first_single_target_hypo.single_id: first_single_target_hypo}  # store all STHs at this current time step (not the whole tree)
 
     def __repr__(self):
         return '<Target | TID: {}, \tclass: {} \nSingle Target Hypothese:\n{}>\n'.format(
@@ -59,7 +59,7 @@ class Target(object):
         Perform KF prediction for all single target hypotheses in this track
         Reference: Algorithm 2.2 (chalmer thesis)
         """
-        for single_target in self.single_target_hypotheses:
+        for _, single_target in self.single_target_hypotheses.items():
             single_target.state = self.density_hdl.predict(single_target.state)
             single_target.prob_existence *= self.prob_survival
 
@@ -69,7 +69,7 @@ class Target(object):
         Reference: Algorithm 2.3 (chalmer thesis)
         :param measurements: list of all measurements (not gated yet)
         """
-        for single_target in self.single_target_hypotheses:
+        for _, single_target in self.single_target_hypotheses.items():
             # "update" populates STH's children by associating a STH from predict step to new measurements
             assert single_target.children == {}, 'STH children is not cleaned up'
             # create Misdetection hypothesis
@@ -111,7 +111,7 @@ class Target(object):
         """
         Prune STH whose prob_existence below a threshold
         """
-        sth_to_prune = [i for i, single_target in enumerate(self.single_target_hypotheses)
+        sth_to_prune = [sth_id for sth_id, single_target in self.single_target_hypotheses.items()
                         if single_target.prob_existence < self.prune_prob_existence]
-        for i in reversed(sth_to_prune):
-            del self.single_target_hypotheses[i]
+        for sth_id in sth_to_prune:
+            del self.single_target_hypotheses[sth_id]

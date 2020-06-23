@@ -205,10 +205,10 @@ class PoissonMultiBernoulliMixture(object):
         """
         # in Target, update single_target_hypotheses with all sth's children
         for target in self.targets_pool:
-            new_single_target_hypotheses = []
-            for parent_sth in target.single_target_hypotheses:
+            new_single_target_hypotheses = {}
+            for _, parent_sth in target.single_target_hypotheses.items():
                 for _, child_sth in parent_sth.children.items():
-                    new_single_target_hypotheses.append(child_sth)
+                    new_single_target_hypotheses[child_sth.single_id] = child_sth
             target.single_target_hypotheses = new_single_target_hypotheses
 
         # merge self.new_targets_pool & self.targets_pool, as in next time step current new_targets_pool is not new
@@ -232,8 +232,8 @@ class PoissonMultiBernoulliMixture(object):
         """
         self.poisson.prune()
         self.prune_global_hypotheses()
-        # for target in self.targets_pool:
-        #     target.prune_single_target_hypo()
+        for target in self.targets_pool:
+            target.prune_single_target_hypo()
 
     def run(self, measurements: List[ObjectDetection]):
         """
