@@ -52,6 +52,7 @@ class Target(object):
         Reset sing_id_to_give as the Target finished update for this time step, so that at the next time step, STH ID
         starts from 0 again
         """
+        # print('Target ID {} invokes reset_STH_id'.format(self.target_id))
         self.single_id_to_give = 0
 
     def predict(self):

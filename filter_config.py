@@ -9,12 +9,12 @@ class FilterConfig(object):
                  measurement_dim: int,
                  prob_survival: float = 0.85,  # 0.85, 0.75 seems to work
                  prob_detection: float = 0.99,  # 0.99, 0.95 seems to work
-                 poisson_birth_weight: float = np.log(1),  # 1, 0.5 seems to work
+                 poisson_birth_weight: float = np.log(0.1),  # 1, 0.5 seems to work
                  poisson_birth_gating_size: float = 11.0,
                  poisson_prune_threshold: float = -3,
                  poisson_merge_threshold: float = 2.0,
                  poisson_clutter_intensity: float = 1e-4,
-                 pmbm_desired_num_global_hypotheses: int = 10,
+                 pmbm_desired_num_global_hypotheses: int = 5,
                  pmbm_prune_single_hypothesis_existence: float = 1e-3,
                  pmbm_prune_global_hypothesis_log_weight: float = -5.0):
         self.state_dim = state_dim

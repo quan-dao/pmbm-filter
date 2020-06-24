@@ -106,14 +106,15 @@ class PoissonMultiBernoulliMixture(object):
                         # not in the current global hypothesis
                         target_id = self.new_targets_pool[j_colummn - num_of_targets].target_id
                         sth_id = 0
-                        new_global_hypo.log_weight += self.new_targets_pool[j_colummn - num_of_targets].single_target_hypotheses[0].log_weight
+                        # new_global_hypo.log_weight += self.new_targets_pool[j_colummn - num_of_targets].single_target_hypotheses[0].log_weight
                         new_global_hypo.new_targets_id.append(target_id)
                     else:
                         # the target this measurement is assigned to is a target previously detected,
                         target_id, parent_sth_id = global_hypo.pairs_id[j_colummn]
                         sth_id = self.targets_pool[target_id].single_target_hypotheses[parent_sth_id].children[i_meas].get_id()
-                        new_global_hypo.log_weight += self.targets_pool[target_id].single_target_hypotheses[parent_sth_id].children[i_meas].log_weight
+                        # new_global_hypo.log_weight += self.targets_pool[target_id].single_target_hypotheses[parent_sth_id].children[i_meas].log_weight
                     new_global_hypo.pairs_id.append((target_id, sth_id))
+                    new_global_hypo.log_weight = log_w - cost
                     detected_targets.append(target_id)
 
                 # add hypotheses of objects that is undetected, if prob of existence of this hypo above a threshold
@@ -140,12 +141,21 @@ class PoissonMultiBernoulliMixture(object):
         for i_prune in reversed(to_prune_hypo):
             del self.global_hypotheses[i_prune]
 
-        # Sort self.global_hypotheses in descending order of global_hypo.log_weight, then capping (if necessary)
+        # renormalize log weights
         log_weights_unnorm = [global_hypo.log_weight for global_hypo in self.global_hypotheses]
-        sorted_indicies = np.argsort(log_weights_unnorm)  # ascending order
+        log_weights, _ = normalize_log_weights(log_weights_unnorm)
+
+        # Sort self.global_hypotheses in descending order of global_hypo.log_weight, then capping (if necessary)
+        sorted_indicies = np.argsort(log_weights)  # ascending order
         sorted_indicies = sorted_indicies[::-1]  # flip sorted_indicies, to have descending order
         kept_indicies = sorted_indicies[: min(len(self.global_hypotheses), self.desired_num_global_hypotheses)]
         self.global_hypotheses = [self.global_hypotheses[i] for i in kept_indicies]
+
+        # renormalize log weights
+        log_weights_unnorm = [global_hypo.log_weight for global_hypo in self.global_hypotheses]
+        log_weights, _ = normalize_log_weights(log_weights_unnorm)
+        for log_w, global_hypo in zip(log_weights, self.global_hypotheses):
+            global_hypo.log_weight = log_w
 
     def recycle_targets(self):
         """
@@ -234,8 +244,8 @@ class PoissonMultiBernoulliMixture(object):
         """
         self.poisson.prune()
         self.prune_global_hypotheses()
-        for target in self.targets_pool:
-            target.prune_single_target_hypo()
+        # for target in self.targets_pool:
+        #     target.prune_single_target_hypo()
 
     def run(self, measurements: List[ObjectDetection]):
         """
