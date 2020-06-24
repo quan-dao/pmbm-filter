@@ -243,20 +243,48 @@ class PoissonMultiBernoulliMixture(object):
         Do all the pruning here
         """
         self.poisson.prune()
+
         # prune single target hypotheses whose prob of existence smaller than a threshold
         all_prune_pairs = []
+        all_recycle_pairs = []
         for target in self.targets_pool:
-            all_prune_pairs += target.prune_single_target_hypo()
+            prune_pairs, recycle_pairs = target.prune_single_target_hypo()
+            all_prune_pairs += prune_pairs
+            all_recycle_pairs += recycle_pairs
+
+        # recycle Bernoulli
+        for target_id, sth_id in all_recycle_pairs:
+            log_w = self.targets_pool[target_id].single_target_hypotheses[sth_id].log_weight
+            state = self.targets_pool[target_id].single_target_hypotheses[sth_id].state
+            self.poisson.intensity.append({'w': log_w, 's': state})
+            del self.targets_pool[target_id].single_target_hypotheses[sth_id]
+
         # remove all global hypotheses where a prune pair appear
         prune_global_hypo = []
         for i, global_hypo in enumerate(self.global_hypotheses):
-            for prune_pair in all_prune_pairs:
-                if prune_pair in global_hypo.pairs_id and i not in prune_global_hypo:
+            for removed_pair in (all_prune_pairs + all_recycle_pairs):
+                if removed_pair in global_hypo.pairs_id and i not in prune_global_hypo:
                     prune_global_hypo.append(i)
         for i in reversed(prune_global_hypo):
             del self.global_hypotheses[i]
+
         # prune global hypotheses whose weights is smaller than a threshold
         self.prune_global_hypotheses()
+
+        # remove Bernoulli doesn't appear in any global hypotheses
+        for target in self.targets_pool:
+            unused_sth_id = []
+            for single_id, single_hypo in target.single_target_hypotheses.items():
+                assert single_id == single_hypo.single_id, 'Weird, they are not the same'
+                pair = (target.target_id, single_id)
+                need_to_prune = True
+                for global_hypo in self.global_hypotheses:
+                    if pair in global_hypo.pairs_id:
+                        need_to_prune = False
+                        break
+                if need_to_prune: unused_sth_id.append(single_id)
+            for sth_id in unused_sth_id:
+                del target.single_target_hypotheses[sth_id]
 
     def run(self, measurements: List[ObjectDetection]):
         """

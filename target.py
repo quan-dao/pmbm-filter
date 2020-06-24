@@ -19,8 +19,8 @@ class Target(object):
                  prob_detection: float,
                  first_single_target_hypo: SingleTargetHypothesis,
                  density_hdl: GaussianDensity,
-                 gating_size: float = 5.0,
-                 prune_prob_existence: float = 1e-2):
+                 gating_size: float = 5.0,  # 5.0
+                 prune_prob_existence: float = 1e-3):
         self.target_id = target_id  # a unique number to distinguish this target with others
         self.obj_type = obj_type
         self.time_of_birth = time_of_birth  # time step when this target is born
@@ -30,6 +30,7 @@ class Target(object):
         self.current_time_step = time_of_birth
         self.gating_size = gating_size
         self.prune_prob_existence = prune_prob_existence
+        self.recyle_prob_existence = 10 * self.prune_prob_existence
         self.single_id_to_give = 0
         # set ID for 1st single target hypo & store it
         first_single_target_hypo.single_id = 0
@@ -108,14 +109,21 @@ class Target(object):
         # reset single_id_to_give so that next time step single_target_id starts from 0
         self.reset_single_id_to_give()
 
-    def prune_single_target_hypo(self) -> List[Tuple[int, int]]:
+    def prune_single_target_hypo(self) -> (List[Tuple[int, int]], List[Tuple[int, int]]):
         """
         Prune STH whose prob_existence below a threshold
         """
-        sth_to_prune = [sth_id for sth_id, single_target in self.single_target_hypotheses.items()
-                        if single_target.prob_existence < self.prune_prob_existence]
-        pruned_pair = [(self.target_id, sth_id) for sth_id in sth_to_prune]
-        for sth_id in sth_to_prune:
+        prune_pairs = []
+        recycle_pairs = []
+        for sth_id, single_target in self.single_target_hypotheses.items():
+            if single_target.prob_existence < self.prune_prob_existence:
+                prune_pairs.append((self.target_id, sth_id))
+
+            elif single_target.prob_existence < self.recyle_prob_existence:
+                recycle_pairs.append((self.target_id, sth_id))
+
+        # remove STH in prune_pairs out of single_target_hypotheses
+        for _, sth_id in prune_pairs:
             del self.single_target_hypotheses[sth_id]
 
-        return pruned_pair
+        return prune_pairs, recycle_pairs
