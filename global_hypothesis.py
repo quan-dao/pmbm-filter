@@ -7,6 +7,7 @@ class GlobalHypothesis(object):
     def __init__(self, log_w: float = 0):
         self.pairs_id : List[Tuple[int, int]] = []
         self.log_weight = log_w
+        self.new_targets_id = []
 
     def get_num_obj(self) -> int:
         """

@@ -107,6 +107,7 @@ class PoissonMultiBernoulliMixture(object):
                         target_id = self.new_targets_pool[j_colummn - num_of_targets].target_id
                         sth_id = 0
                         new_global_hypo.log_weight += self.new_targets_pool[j_colummn - num_of_targets].single_target_hypotheses[0].log_weight
+                        new_global_hypo.new_targets_id.append(target_id)
                     else:
                         # the target this measurement is assigned to is a target previously detected,
                         target_id, parent_sth_id = global_hypo.pairs_id[j_colummn]
@@ -186,6 +187,7 @@ class PoissonMultiBernoulliMixture(object):
                 sth_id = target.single_target_hypotheses[0].single_id
                 first_global_hypo.log_weight += target.single_target_hypotheses[0].log_weight
                 first_global_hypo.pairs_id.append((target_id, sth_id))
+                first_global_hypo.new_targets_id.append(target_id)
             self.global_hypotheses.append(first_global_hypo)
         else:
             self.global_hypotheses = self.create_new_global_hypotheses(len(measurements))
@@ -250,5 +252,13 @@ class PoissonMultiBernoulliMixture(object):
         TODO: estimate targets by choosing the global hypothese with highest weights
         :return:
         """
-        # print('Chosen global hypothesis: \n', self.global_hypotheses[0])
-        pass
+        chosen_global_hypo = self.global_hypotheses[0]
+        print('Estimation | Num Targets: {}\n {} New Targets ID: {}'.format(
+            len(chosen_global_hypo.pairs_id),
+            chosen_global_hypo,
+            chosen_global_hypo.new_targets_id
+        ))
+
+        # clean up new_targets id in global hypotheses
+        for global_hypo in self.global_hypotheses:
+            global_hypo.new_targets_id = []
