@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List
+from typing import List, Tuple
 
 from object_detection import ObjectDetection
 from gaussian_density import GaussianDensity, State
@@ -20,7 +20,7 @@ class Target(object):
                  first_single_target_hypo: SingleTargetHypothesis,
                  density_hdl: GaussianDensity,
                  gating_size: float = 5.0,
-                 prune_prob_existence: float = 1e-3):
+                 prune_prob_existence: float = 1e-2):
         self.target_id = target_id  # a unique number to distinguish this target with others
         self.obj_type = obj_type
         self.time_of_birth = time_of_birth  # time step when this target is born
@@ -108,11 +108,14 @@ class Target(object):
         # reset single_id_to_give so that next time step single_target_id starts from 0
         self.reset_single_id_to_give()
 
-    def prune_single_target_hypo(self) -> None:
+    def prune_single_target_hypo(self) -> List[Tuple[int, int]]:
         """
         Prune STH whose prob_existence below a threshold
         """
         sth_to_prune = [sth_id for sth_id, single_target in self.single_target_hypotheses.items()
                         if single_target.prob_existence < self.prune_prob_existence]
+        pruned_pair = [(self.target_id, sth_id) for sth_id in sth_to_prune]
         for sth_id in sth_to_prune:
             del self.single_target_hypotheses[sth_id]
+
+        return pruned_pair

@@ -243,9 +243,20 @@ class PoissonMultiBernoulliMixture(object):
         Do all the pruning here
         """
         self.poisson.prune()
+        # prune single target hypotheses whose prob of existence smaller than a threshold
+        all_prune_pairs = []
+        for target in self.targets_pool:
+            all_prune_pairs += target.prune_single_target_hypo()
+        # remove all global hypotheses where a prune pair appear
+        prune_global_hypo = []
+        for i, global_hypo in enumerate(self.global_hypotheses):
+            for prune_pair in all_prune_pairs:
+                if prune_pair in global_hypo.pairs_id and i not in prune_global_hypo:
+                    prune_global_hypo.append(i)
+        for i in reversed(prune_global_hypo):
+            del self.global_hypotheses[i]
+        # prune global hypotheses whose weights is smaller than a threshold
         self.prune_global_hypotheses()
-        # for target in self.targets_pool:
-        #     target.prune_single_target_hypo()
 
     def run(self, measurements: List[ObjectDetection]):
         """
