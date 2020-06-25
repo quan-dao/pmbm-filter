@@ -39,6 +39,7 @@ class PoissonMultiBernoulliMixture(object):
                                            config.poisson_merge_threshold,
                                            config.poisson_clutter_intensity,
                                            current_time_step)
+        self.estimation_result: Dict[int, Dict] = {}
 
     def __repr__(self):
         return '<PMBM | Num Targets: {},\t Num Poisson: {},\t Global Hypos:\n {}>'.format(
@@ -246,6 +247,10 @@ class PoissonMultiBernoulliMixture(object):
         # clean up new_targets_pool
         self.new_targets_pool: Dict[int, Target] = {}
 
+    def increment_internal_timestep(self) -> None:
+        """
+        To increment internal timestep counter of PMBM, Poisson, Target
+        """
         # increment current_time_step & update the same in Poisson & Target
         self.current_time_step += 1
         self.poisson.current_time_step = self.current_time_step
@@ -318,6 +323,7 @@ class PoissonMultiBernoulliMixture(object):
         self.update(measurements)
         self.reduction()
         self.estimate_targets()
+        self.increment_internal_timestep()
 
     def estimate_targets(self):
         """
@@ -330,6 +336,16 @@ class PoissonMultiBernoulliMixture(object):
             chosen_global_hypo,
             chosen_global_hypo.new_targets_id
         ))
+
+        estimation = {}
+        for target_id, sth_id in chosen_global_hypo.pairs_id:
+            state = self.targets_pool[target_id].single_target_hypotheses[sth_id].state
+            estimation[target_id] = {
+                'translation': [state.x[0, 0], state.x[1, 0]],
+                'orientation': state.x[2, 0],
+                'class': state.obj_type
+            }
+        self.estimation_result = {self.current_time_step: estimation}
 
         # clean up new_targets id in global hypotheses
         for global_hypo in self.global_hypotheses:
