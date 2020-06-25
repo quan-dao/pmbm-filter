@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List
+from typing import List, Dict
 
 from gaussian_density import State, GaussianDensity
 from object_detection import ObjectDetection
@@ -99,7 +99,7 @@ class PointPoissonProcess(object):
         reduced_log_weights, reduced_states = self.density_hdl.mixture_reduction(log_weights, states, self.merge_threshold)
         self.intensity = [{'w': log_w, 's': state} for log_w, state in zip(reduced_log_weights, reduced_states)]
 
-    def create_new_targets(self, measurements: List[ObjectDetection]) -> List[Target]:
+    def create_new_targets(self, measurements: List[ObjectDetection]) -> Dict[int, Target]:
         """
         Perform update for targets detected for the first time
         :return: a list new tracks spawned by this list of measurements
@@ -110,7 +110,7 @@ class PointPoissonProcess(object):
             gating_matrix[i_com, meas_in_gate] = 1
 
         # for each measurement spawn a new track (i.e. target)
-        new_targets = []
+        new_targets = {}
         for j_meas, meas in enumerate(measurements):
             assert np.sum(gating_matrix[:, j_meas]) > 0, 'Measurement {} is not in gate of any poisson componenets'.format(j_meas)
             # get index of poisson components which has this measurement in its gate
@@ -145,6 +145,6 @@ class PointPoissonProcess(object):
                             prob_detection=self.prob_detection,
                             first_single_target_hypo=first_STH,
                             density_hdl=self.density_hdl)
-            new_targets.append(target)
+            new_targets[j_meas] = target
 
         return new_targets

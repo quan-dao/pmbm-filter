@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List
+from typing import List, Dict
 
 from murty import Murty
 from global_hypothesis import GlobalHypothesis
@@ -16,8 +16,13 @@ class PoissonMultiBernoulliMixture(object):
                  config: FilterConfig,
                  density_hdl: GaussianDensity,
                  current_time_step: int = 0):
-        self.targets_pool: List[Target] = []  # collection of all targets since the begin of time to this time step includes new STH created after update
-        self.new_targets_pool: List[Target] = []  # all possibly new targets that are detected for the 1st time at this time step
+        # collection of all targets since the begin of time to this time step includes new STH created after update
+        # key or targets_pool is the target_id of the target in value
+        self.targets_pool: Dict[int, Target] = {}
+        # all possibly new targets that are detected for the 1st time at this time step
+        # key of new_target_pool is the index of the measurement that gives rise to the target,
+        # not target_id (as in targets_pool)
+        self.new_targets_pool: Dict[int, Target] = {}
         self.global_hypotheses: List[GlobalHypothesis] = []
         self.desired_num_global_hypotheses = config.pmbm_desired_num_global_hypotheses
         self.prune_single_hypothesis_existence = config.pmbm_prune_single_hypothesis_existence
@@ -72,7 +77,7 @@ class PoissonMultiBernoulliMixture(object):
                 for meas_idx in meas_in_gate:
                     new_target = self.new_targets_pool[meas_idx]
                     cost_matrix[meas_idx, num_of_targets + meas_idx] = -new_target.single_target_hypotheses[0].cost
-        for i_meas, new_target in enumerate(self.new_targets_pool):
+        for i_meas, new_target in self.new_targets_pool.items():
             if np.all(cost_matrix[i_meas, : num_of_targets] == INF):
                 # This measurement is not in gate of any previously detected object
                 cost_matrix[i_meas, num_of_targets + i_meas] = -new_target.single_target_hypotheses[0].cost  # new target only has 1 STH, there were a minus here
@@ -144,7 +149,7 @@ class PoissonMultiBernoulliMixture(object):
         :return:
         """
         # only invoked after new global hypotheses are created
-        assert self.new_targets_pool == [], 'new_target_pool is not cleaned up after creating new global hypotheses'
+        assert self.new_targets_pool == {}, 'new_target_pool is not cleaned up after creating new global hypotheses'
 
         # prunning
         to_prune_hypo = [i for i, global_hypo in enumerate(self.global_hypotheses) if global_hypo.log_weight < self.prune_global_hypothesis_log_weight]
@@ -179,9 +184,9 @@ class PoissonMultiBernoulliMixture(object):
         Perform predict for both Poisson and Multi Bernoulli Mixture
         :return:
         """
-        assert self.new_targets_pool == [], 'new_target_pool is not cleaned up after creating new global hypotheses'
+        assert self.new_targets_pool == {}, 'new_target_pool is not cleaned up after creating new global hypotheses'
         self.poisson.predict(measurements)  # birth process is also done here
-        for target in self.targets_pool:
+        for _, target in self.targets_pool.items():
             target.predict()
 
     def update(self, measurements: List[ObjectDetection]):
@@ -194,7 +199,7 @@ class PoissonMultiBernoulliMixture(object):
         # update for objects detected for the 1st time
         self.new_targets_pool = self.poisson.create_new_targets(measurements)
         # update for objects detected in the previous time step
-        for target in self.targets_pool:
+        for _, target in self.targets_pool.items():
             target.update(measurements)
         # create new global hypothesis
         if len(self.global_hypotheses) == 0:
@@ -202,8 +207,8 @@ class PoissonMultiBernoulliMixture(object):
                 'In initialization phase, targets_pool has to be empty (current len: {})'.format(len(self.targets_pool))
             # create first global hypothesis with newly detected objects
             first_global_hypo = GlobalHypothesis()
-            for target in self.new_targets_pool:
-                target_id = target.target_id
+            for target_id, target in self.new_targets_pool.items():
+                assert target_id == target.target_id, 'Weird, they are not the same'
                 sth_id = target.single_target_hypotheses[0].single_id
                 first_global_hypo.log_weight += target.single_target_hypotheses[0].log_weight
                 first_global_hypo.pairs_id.append((target_id, sth_id))
@@ -214,8 +219,6 @@ class PoissonMultiBernoulliMixture(object):
 
         # normalize global hypothesis weights
         log_weights_unnorm = [global_hypo.log_weight for global_hypo in self.global_hypotheses]
-        if len(log_weights_unnorm) == 0:
-            print('Hold. something weird')
         log_weights, _ = normalize_log_weights(log_weights_unnorm)
         for log_w, global_hypo in zip(log_weights, self.global_hypotheses):
             global_hypo.log_weight = log_w
@@ -228,7 +231,7 @@ class PoissonMultiBernoulliMixture(object):
         Update miscellaneous thing of Poisson, Target, and PMBM to move on to next time step
         """
         # in Target, update single_target_hypotheses with all sth's children
-        for target in self.targets_pool:
+        for _, target in self.targets_pool.items():
             new_single_target_hypotheses = {}
             for _, parent_sth in target.single_target_hypotheses.items():
                 for _, child_sth in parent_sth.children.items():
@@ -236,18 +239,17 @@ class PoissonMultiBernoulliMixture(object):
             target.single_target_hypotheses = new_single_target_hypotheses
 
         # merge self.new_targets_pool & self.targets_pool, as in next time step current new_targets_pool is not new
-        old_targets_id = [target.target_id for target in self.targets_pool]
-        for new_target in self.new_targets_pool:
-            assert new_target.target_id not in old_targets_id, \
+        for i_meas, new_target in self.new_targets_pool.items():
+            assert new_target.target_id not in self.targets_pool.keys(), \
                 'new_target ID ({}) is in old_targets_id'.format(new_target.target_id)
-        self.targets_pool += self.new_targets_pool
+            self.targets_pool[new_target.target_id] = new_target
         # clean up new_targets_pool
-        self.new_targets_pool: List[Target] = []
+        self.new_targets_pool: Dict[int, Target] = {}
 
         # increment current_time_step & update the same in Poisson & Target
         self.current_time_step += 1
         self.poisson.current_time_step = self.current_time_step
-        for target in self.targets_pool:
+        for _, target in self.targets_pool.items():
             target.current_time_step = self.current_time_step
 
     def reduction(self):
@@ -259,7 +261,7 @@ class PoissonMultiBernoulliMixture(object):
         # prune single target hypotheses whose prob of existence smaller than a threshold
         all_prune_pairs = []
         all_recycle_pairs = []
-        for target in self.targets_pool:
+        for _, target in self.targets_pool.items():
             prune_pairs, recycle_pairs = target.prune_single_target_hypo()
             all_prune_pairs += prune_pairs
             all_recycle_pairs += recycle_pairs
@@ -284,7 +286,7 @@ class PoissonMultiBernoulliMixture(object):
         self.prune_global_hypotheses()
 
         # remove Bernoulli doesn't appear in any global hypotheses
-        for target in self.targets_pool:
+        for _, target in self.targets_pool.items():
             unused_sth_id = []
             for single_id, single_hypo in target.single_target_hypotheses.items():
                 assert single_id == single_hypo.single_id, 'Weird, they are not the same'
@@ -297,6 +299,12 @@ class PoissonMultiBernoulliMixture(object):
                 if need_to_prune: unused_sth_id.append(single_id)
             for sth_id in unused_sth_id:
                 del target.single_target_hypotheses[sth_id]
+
+        # # remove targets which don't have any Bernoulli in its single_target_hypotheses
+        # empty_targets = [i_target for i_target, target in enumerate(self.targets_pool)
+        #                  if len(target.single_target_hypotheses.keys()) == 0]
+        # for i_target in reversed(empty_targets):
+        #     del self.targets_pool[i_target]
 
     def run(self, measurements: List[ObjectDetection]):
         """
