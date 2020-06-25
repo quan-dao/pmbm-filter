@@ -43,7 +43,7 @@ class PointPoissonProcess(object):
         self.target_id_to_give += 1
         return new_target_id
 
-    def give_birth(self, measurements: List[ObjectDetection], birth_per_meas=3) -> None:
+    def give_birth(self, measurements: List[ObjectDetection], birth_per_meas=10) -> None:
         """
         Add new Gaussian to the mixture (which represent the poisson intensity). This birth process is driven by
         measurements. Each measurement induce 3 birth of the same class by adding noise (uniformly distributed )
@@ -52,11 +52,14 @@ class PointPoissonProcess(object):
         :param classes:
         :param birth_per_meas: number of birth induced by a measurement
         """
+        trans_width = 10
+        trans_cov = (2*trans_width)**2
+        angle_cov = (2*np.pi)**2
         for meas in measurements:
-            delta_x = np.random.uniform(-5, 5, size=birth_per_meas).tolist() + [0]  # to ensure each measurement spawns a track
-            delta_y = np.random.uniform(-5, 5, size=birth_per_meas).tolist() + [0]
+            delta_x = np.random.uniform(-trans_width, trans_width, size=birth_per_meas).tolist() + [0]  # to ensure each measurement spawns a track
+            delta_y = np.random.uniform(-trans_width, trans_width, size=birth_per_meas).tolist() + [0]
             delta_yaw = np.random.uniform(-np.pi, np.pi, size=birth_per_meas).tolist() + [0]
-            for i in range(birth_per_meas):
+            for i in range(len(delta_x)):
                 mean = np.array([
                     [meas.z[0, 0] + delta_x[i]],  # x
                     [meas.z[1, 0] + delta_y[i]],  # y
@@ -65,7 +68,7 @@ class PointPoissonProcess(object):
                     [0],  # dy
                     [0]  # dyaw
                 ])
-                cov = np.diag([10, 10, 2*np.pi, 10, 10, 2*np.pi])
+                cov = np.diag([trans_cov, trans_cov, angle_cov, 10, 10, 2*np.pi])
                 self.intensity.append({'w': self.birth_weight,
                                        's': State(mean, cov, meas.obj_type, empty_constructor=False)})
 

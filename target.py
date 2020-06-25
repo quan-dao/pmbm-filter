@@ -19,8 +19,8 @@ class Target(object):
                  prob_detection: float,
                  first_single_target_hypo: SingleTargetHypothesis,
                  density_hdl: GaussianDensity,
-                 gating_size: float = 5.0,  # 5.0
-                 prune_prob_existence: float = 1e-3):
+                 gating_size: float = 21.0,  # 5.0
+                 prune_prob_existence: float = 1e-5):
         self.target_id = target_id  # a unique number to distinguish this target with others
         self.obj_type = obj_type
         self.time_of_birth = time_of_birth  # time step when this target is born

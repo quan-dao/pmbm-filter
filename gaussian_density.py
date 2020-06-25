@@ -107,7 +107,7 @@ class GaussianDensity(object):
         for ix, meas in enumerate(measurements):
             if meas.obj_type != state.obj_type: continue  # skip measurements indicate different class
             innov = meas.z - z_mean  # innovation vector
-            d = innov.transpose() @ inv_S @ innov
+            d = (innov.transpose() @ inv_S @ innov)
             if d < gating_size: measurements_in_gate.append(ix)
 
         return measurements_in_gate
