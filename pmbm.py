@@ -65,8 +65,17 @@ class PoissonMultiBernoulliMixture(object):
             idx_target += 1
 
         # create cost for newly detected target
+        all_meas_idx = np.arange(0, num_of_measurements)
+        for idx_target in range(num_of_targets):
+            meas_in_gate = all_meas_idx[cost_matrix[:, idx_target] < INF]
+            if len(meas_in_gate) > 1:  # this previously detected target has more than 1 measurements in its gate, at least one of them can create new target
+                for meas_idx in meas_in_gate:
+                    new_target = self.new_targets_pool[meas_idx]
+                    cost_matrix[meas_idx, num_of_targets + meas_idx] = -new_target.single_target_hypotheses[0].cost
         for i_meas, new_target in enumerate(self.new_targets_pool):
-            cost_matrix[i_meas, num_of_targets + i_meas] = -new_target.single_target_hypotheses[0].cost  # new target only has 1 STH, there were a minus here
+            if np.all(cost_matrix[i_meas, : num_of_targets] == INF):
+                # This measurement is not in gate of any previously detected object
+                cost_matrix[i_meas, num_of_targets + i_meas] = -new_target.single_target_hypotheses[0].cost  # new target only has 1 STH, there were a minus here
 
         return cost_matrix
 
@@ -93,7 +102,8 @@ class PoissonMultiBernoulliMixture(object):
                 if not ok:
                     'Murty solver is not ok with cost matrix {}'.format(cost_matrix)
                     break
-                assert cost < INF, 'Optimal cost {} is too high'.format(cost)
+                # assert cost < INF, 'Optimal cost {} is too high'.format(cost)
+                if cost > 0.5 * INF: break
                 column_for_meas = column_for_meas.tolist()
                 new_global_hypo = GlobalHypothesis()
 
@@ -204,6 +214,8 @@ class PoissonMultiBernoulliMixture(object):
 
         # normalize global hypothesis weights
         log_weights_unnorm = [global_hypo.log_weight for global_hypo in self.global_hypotheses]
+        if len(log_weights_unnorm) == 0:
+            print('Hold. something weird')
         log_weights, _ = normalize_log_weights(log_weights_unnorm)
         for log_w, global_hypo in zip(log_weights, self.global_hypotheses):
             global_hypo.log_weight = log_w
