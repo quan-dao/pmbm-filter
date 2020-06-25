@@ -300,11 +300,14 @@ class PoissonMultiBernoulliMixture(object):
             for sth_id in unused_sth_id:
                 del target.single_target_hypotheses[sth_id]
 
-        # # remove targets which don't have any Bernoulli in its single_target_hypotheses
-        # empty_targets = [i_target for i_target, target in enumerate(self.targets_pool)
-        #                  if len(target.single_target_hypotheses.keys()) == 0]
-        # for i_target in reversed(empty_targets):
-        #     del self.targets_pool[i_target]
+        # remove targets which don't have any Bernoulli in its single_target_hypotheses
+        empty_targets = [i_target for i_target, target in self.targets_pool.items()
+                         if len(target.single_target_hypotheses.keys()) == 0]
+        for i_target in empty_targets:  # don't need reversed(), cuz self.targets_pool is now a Dict
+            del self.targets_pool[i_target]
+
+        # set ID of the next Target to be born
+        self.poisson.target_id_to_give = max(self.targets_pool.keys()) + 1
 
     def run(self, measurements: List[ObjectDetection]):
         """
