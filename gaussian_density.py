@@ -99,7 +99,7 @@ class GaussianDensity(object):
         :return: List of index of measurements inside the gate of this this state
         """
         S = self.H @ state.P @ self.H.transpose() + self.R  # innovation covariance
-        S = (S + S.transpose()) / 2  # numerical stability
+        S = (S + S.transpose()) / 2.0  # numerical stability
         inv_S = np.linalg.inv(S)  # cache invert of S
         z_mean = self.H @ state.x
 

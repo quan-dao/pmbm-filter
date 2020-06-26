@@ -303,6 +303,10 @@ class PoissonMultiBernoulliMixture(object):
                         break
                 if need_to_prune: unused_sth_id.append(single_id)
             for sth_id in unused_sth_id:
+                # recycle instead of remove
+                log_w = target.single_target_hypotheses[sth_id].log_weight
+                state = target.single_target_hypotheses[sth_id].state
+                self.poisson.intensity.append({'w': log_w, 's': state})
                 del target.single_target_hypotheses[sth_id]
 
         # remove targets which don't have any Bernoulli in its single_target_hypotheses

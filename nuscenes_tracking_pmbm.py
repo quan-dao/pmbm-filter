@@ -1,5 +1,6 @@
 import json
 import numpy as np
+from datetime import datetime
 
 from filter_config import FilterConfig, get_gaussian_density_NuScenes_CV
 from pmbm import PoissonMultiBernoulliMixture
@@ -24,25 +25,35 @@ def main():
                                                             obj_type=obj_type,
                                                             empty_constructor=False)
                                             for measurement, obj_type in zip(all_measurements[time_step], all_classes[time_step])]
-
+    all_estimation = {}
     num_frames = len(all_object_detections.keys())
     for i_frame in range(num_frames):
         measurements = all_object_detections[str(i_frame)]
         # for meas in measurements:
         #     print(meas)
         # break
-        print('Time step {}'.format(i_frame))
-        # print('Before Prediction \n', pmbm_filter)
 
+        if i_frame == 1:
+            print('Hold')
+
+        print('Time step {}'.format(i_frame))
         pmbm_filter.run(measurements)
 
         print('After Update\n', pmbm_filter)
         print('\n-----------------------------\n')
 
-        # early stop
-        if i_frame > 15:
-            break
+        estimation_result = pmbm_filter.estimation_result
+        pmbm_internal_timestep = list(estimation_result.keys())[0]
+        assert pmbm_internal_timestep == i_frame, 'Missmatch timestep'
 
+        all_estimation[i_frame] = estimation_result[pmbm_internal_timestep]
+
+        # early stop
+        # if i_frame > 15:
+        #     break
+
+    # with open('./estimation-result/estimation-scene-0757-{}.json'.format(datetime.now().strftime("%Y%m%d-%H%M%S")), 'w') as outfile:
+    #     json.dump(all_estimation, outfile)
 
 if __name__ == '__main__':
     main()

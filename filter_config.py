@@ -8,11 +8,11 @@ class FilterConfig(object):
                  state_dim: int,
                  measurement_dim: int,
                  prob_survival: float = 0.85,  # 0.85, 0.75 seems to work
-                 prob_detection: float = 0.99,  # 0.99, 0.95 seems to work
-                 poisson_birth_weight: float = np.log(0.01),  # 1, 0.1 seems to work
+                 prob_detection: float = 0.9,  # 0.99, 0.95 seems to work
+                 poisson_birth_weight: float = np.log(1),  # 0.01, 0.1 seems to work
                  poisson_birth_gating_size: float = 11.0,
                  poisson_prune_threshold: float = -5,
-                 poisson_merge_threshold: float = 2.0,
+                 poisson_merge_threshold: float = 5.0,  # 2.0
                  poisson_clutter_intensity: float = 1e-4,
                  pmbm_desired_num_global_hypotheses: int = 15,
                  pmbm_prune_single_hypothesis_existence: float = 1e-3,
@@ -42,10 +42,10 @@ def get_gaussian_density_NuScenes_CV() -> GaussianDensity:
     # motion model
     F = np.eye(state_dim)
     F[:3, 3:] = np.eye(3) * dt
-    Q = np.diag([9.45275998e-02, 9.45620374e-02, 1.41680460e-01, 9.45275998e-02, 9.45620374e-02, 1.41680460e-01])  # of truck
+    Q = np.diag([2.0, 2.0, 0.5, 5.0, 5.0, 1.0])
     # measurement model
     H = np.concatenate((np.eye(3), np.zeros((3, 3))), axis=1)
-    R = np.diag([0.23228021, 0.22229261, 1.05163481])  # of class trailer
+    R = np.diag([0.65, 0.65, 1.0])
 
     density = GaussianDensity(state_dim, meas_dim, F, Q, H, R)
     return density
