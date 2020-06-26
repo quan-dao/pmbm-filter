@@ -15,14 +15,16 @@ def main():
     pmbm_filter = PoissonMultiBernoulliMixture(config, density)
 
     # get measurements
-    with open('meausrement-scene-0757.json', 'r') as f:
+    with open('meausrement-full-scene-0757.json', 'r') as f:
         data = json.load(f)
     all_measurements = data['all_measurements']
     all_classes = data['all_classes']
     all_object_detections = {}
     for time_step in all_classes.keys():
-        all_object_detections[time_step] = [ObjectDetection(z=np.array(measurement).reshape(3, 1),
+        all_object_detections[time_step] = [ObjectDetection(z=np.array(measurement[:3]).reshape(3, 1),
                                                             obj_type=obj_type,
+                                                            size=measurement[3:6],
+                                                            height=measurement[6],
                                                             empty_constructor=False)
                                             for measurement, obj_type in zip(all_measurements[time_step], all_classes[time_step])]
     all_estimation = {}
@@ -52,8 +54,9 @@ def main():
         # if i_frame > 15:
         #     break
 
-    # with open('./estimation-result/estimation-scene-0757-{}.json'.format(datetime.now().strftime("%Y%m%d-%H%M%S")), 'w') as outfile:
-    #     json.dump(all_estimation, outfile)
+    with open('./estimation-result/estimation-scene-0757-{}.json'.format(datetime.now().strftime("%Y%m%d-%H%M%S")), 'w') as outfile:
+        json.dump(all_estimation, outfile)
+
 
 if __name__ == '__main__':
     main()

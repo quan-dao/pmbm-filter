@@ -326,10 +326,10 @@ class PoissonMultiBernoulliMixture(object):
         self.predict(measurements)
         self.update(measurements)
         self.reduction()
-        self.estimate_targets()
+        self.estimate_targets(measurements)
         self.increment_internal_timestep()
 
-    def estimate_targets(self):
+    def estimate_targets(self, measurements: List[ObjectDetection]):
         """
         TODO: estimate targets by choosing the global hypothese with highest weights
         :return:
@@ -344,10 +344,14 @@ class PoissonMultiBernoulliMixture(object):
         estimation = {}
         for target_id, sth_id in chosen_global_hypo.pairs_id:
             state = self.targets_pool[target_id].single_target_hypotheses[sth_id].state
+            i_meas = self.targets_pool[target_id].single_target_hypotheses[sth_id].assoc_meas_idx
+            assert i_meas > -1, 'Target {} in best global hypo is not associated with any measurement'.format(target_id)
             estimation[target_id] = {
                 'translation': [state.x[0, 0], state.x[1, 0]],
                 'orientation': state.x[2, 0],
-                'class': state.obj_type
+                'class': state.obj_type,
+                'size': measurements[i_meas].size,
+                'height': measurements[i_meas].height
             }
         self.estimation_result = {self.current_time_step: estimation}
 
