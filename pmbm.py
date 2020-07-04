@@ -134,11 +134,11 @@ class PoissonMultiBernoulliMixture(object):
                     detected_targets.append(target_id)
 
                 # add hypotheses of objects that is undetected, if prob of existence of this hypo above a threshold
-                # for target_id, parent_sth_id in global_hypo.pairs_id:
-                #     if target_id in detected_targets: continue  # this target is detected by a measurement, move on
-                #     child_single_target = self.targets_pool[target_id].single_target_hypotheses[parent_sth_id].children[-1]  # -1 indicates miss hypothesis
-                #     if child_single_target.get_prob_existence() > self.prune_single_hypothesis_existence:
-                #         new_global_hypo.pairs_id.append((target_id, child_single_target.get_id()))
+                for target_id, parent_sth_id in global_hypo.pairs_id:
+                    if target_id in detected_targets: continue  # this target is detected by a measurement, move on
+                    child_single_target = self.targets_pool[target_id].single_target_hypotheses[parent_sth_id].children[-1]  # -1 indicates miss hypothesis
+                    if child_single_target.get_prob_existence() > self.prune_single_hypothesis_existence:
+                        new_global_hypo.pairs_id.append((target_id, child_single_target.get_id()))
 
                 new_global_hypothese.append(new_global_hypo)
 
@@ -345,14 +345,15 @@ class PoissonMultiBernoulliMixture(object):
         for target_id, sth_id in chosen_global_hypo.pairs_id:
             state = self.targets_pool[target_id].single_target_hypotheses[sth_id].state
             i_meas = self.targets_pool[target_id].single_target_hypotheses[sth_id].assoc_meas_idx
-            assert i_meas > -1, 'Target {} in best global hypo is not associated with any measurement'.format(target_id)
-            estimation[target_id] = {
-                'translation': [state.x[0, 0], state.x[1, 0]],
-                'orientation': state.x[2, 0],
-                'class': state.obj_type,
-                'size': measurements[i_meas].size,
-                'height': measurements[i_meas].height
-            }
+            # assert i_meas > -1, 'Target {} in best global hypo is not associated with any measurement'.format(target_id)
+            if i_meas > -1:
+                estimation[target_id] = {
+                    'translation': [state.x[0, 0], state.x[1, 0]],
+                    'orientation': state.x[2, 0],
+                    'class': state.obj_type,
+                    'size': measurements[i_meas].size,
+                    'height': measurements[i_meas].height
+                }
         self.estimation_result = {self.current_time_step: estimation}
 
         # clean up new_targets id in global hypotheses
