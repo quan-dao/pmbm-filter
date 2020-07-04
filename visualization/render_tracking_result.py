@@ -12,7 +12,7 @@ from box_for_track import Box4Track
 
 def main():
     # Load tracking data
-    with open('./../estimation-result/estimation-scene-0757-20200626-131050.json') as infile:
+    with open('./../estimation-result/estimation-scene-0757-20200704-165858.json') as infile:
         all_tracking_result = json.load(infile)
 
     num_unique_colors = 200

@@ -15,7 +15,7 @@ def main():
     pmbm_filter = PoissonMultiBernoulliMixture(config, density)
 
     # get measurements
-    with open('meausrement-full-scene-0757.json', 'r') as f:
+    with open('megvii-meausrement-full-scene-0757.json', 'r') as f:
         data = json.load(f)
     all_measurements = data['all_measurements']
     all_classes = data['all_classes']
