@@ -14,7 +14,7 @@ class FilterConfig(object):
                  poisson_prune_threshold: float = -5,
                  poisson_merge_threshold: float = 5.0,  # 2.0
                  poisson_clutter_intensity: float = 1e-4,
-                 pmbm_desired_num_global_hypotheses: int = 15,
+                 pmbm_desired_num_global_hypotheses: int = 5,
                  pmbm_prune_single_hypothesis_existence: float = 1e-3,
                  pmbm_prune_global_hypothesis_log_weight: float = -5.0):
         self.state_dim = state_dim

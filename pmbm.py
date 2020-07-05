@@ -318,7 +318,7 @@ class PoissonMultiBernoulliMixture(object):
         # set ID of the next Target to be born
         self.poisson.target_id_to_give = max(self.targets_pool.keys()) + 1
 
-    def run(self, measurements: List[ObjectDetection]):
+    def run(self, measurements: List[ObjectDetection]) -> Dict:
         """
         Main program of PMBM
         :return:
@@ -326,20 +326,21 @@ class PoissonMultiBernoulliMixture(object):
         self.predict(measurements)
         self.update(measurements)
         self.reduction()
-        self.estimate_targets(measurements)
+        estimation = self.estimate_targets(measurements)
         self.increment_internal_timestep()
+        return estimation
 
-    def estimate_targets(self, measurements: List[ObjectDetection]):
+    def estimate_targets(self, measurements: List[ObjectDetection]) -> Dict:
         """
         TODO: estimate targets by choosing the global hypothese with highest weights
         :return:
         """
         chosen_global_hypo = self.global_hypotheses[0]
-        print('Estimation | Num Targets: {}\n {} New Targets ID: {}'.format(
-            len(chosen_global_hypo.pairs_id),
-            chosen_global_hypo,
-            chosen_global_hypo.new_targets_id
-        ))
+        # print('Estimation | Num Targets: {}\n {} New Targets ID: {}'.format(
+        #     len(chosen_global_hypo.pairs_id),
+        #     chosen_global_hypo,
+        #     chosen_global_hypo.new_targets_id
+        # ))
 
         estimation = {}
         for target_id, sth_id in chosen_global_hypo.pairs_id:
@@ -352,10 +353,14 @@ class PoissonMultiBernoulliMixture(object):
                     'orientation': state.x[2, 0],
                     'class': state.obj_type,
                     'size': measurements[i_meas].size,
-                    'height': measurements[i_meas].height
+                    'height': measurements[i_meas].height,
+                    'velocity': [state.x[3, 0], state.x[4, 0]],  # vx, vy
+                    'score': measurements[i_meas].score
                 }
-        self.estimation_result = {self.current_time_step: estimation}
+        # self.estimation_result = {self.current_time_step: estimation}
 
         # clean up new_targets id in global hypotheses
         for global_hypo in self.global_hypotheses:
             global_hypo.new_targets_id = []
+
+        return estimation
