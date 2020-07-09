@@ -12,7 +12,7 @@ from box_for_track import Box4Track
 
 def main():
     # Load tracking data
-    with open('./../estimation-result/estimation-scene-0757-20200704-165858.json') as infile:
+    with open('./../estimation-result/estimation-scene-0757-20200709-123722.json') as infile:
         all_tracking_result = json.load(infile)
 
     num_unique_colors = 200
@@ -67,7 +67,7 @@ def main():
             break
 
         cv2.imshow('CAM_FRONT', im)
-        key = cv2.waitKey(500)  # wait 100ms
+        key = cv2.waitKey(1000)  # wait 100ms
         if key == 32:  # if space is pressed, pause.
             key = cv2.waitKey()
         if key == 27:  # if ESC is pressed, exit.

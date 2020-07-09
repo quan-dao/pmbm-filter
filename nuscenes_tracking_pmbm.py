@@ -39,20 +39,10 @@ def main():
             print('Hold')
 
         print('Time step {}'.format(i_frame))
-        pmbm_filter.run(measurements)
+        all_estimation[i_frame] = pmbm_filter.run(measurements)
 
         print('After Update\n', pmbm_filter)
         print('\n-----------------------------\n')
-
-        estimation_result = pmbm_filter.estimation_result
-        pmbm_internal_timestep = list(estimation_result.keys())[0]
-        assert pmbm_internal_timestep == i_frame, 'Missmatch timestep'
-
-        all_estimation[i_frame] = estimation_result[pmbm_internal_timestep]
-
-        # early stop
-        # if i_frame > 15:
-        #     break
 
     with open('./estimation-result/estimation-scene-0757-{}.json'.format(datetime.now().strftime("%Y%m%d-%H%M%S")), 'w') as outfile:
         json.dump(all_estimation, outfile)
