@@ -35,9 +35,6 @@ def main():
         #     print(meas)
         # break
 
-        if i_frame == 1:
-            print('Hold')
-
         print('Time step {}'.format(i_frame))
         all_estimation[i_frame] = pmbm_filter.run(measurements)
 
