@@ -43,7 +43,7 @@ class PointPoissonProcess(object):
         self.target_id_to_give += 1
         return new_target_id
 
-    def give_birth(self, measurements: List[ObjectDetection], birth_per_meas=10) -> None:
+    def give_birth(self, measurements: List[ObjectDetection], birth_per_meas=0) -> None:
         """
         Add new Gaussian to the mixture (which represent the poisson intensity). This birth process is driven by
         measurements. Each measurement induce 3 birth of the same class by adding noise (uniformly distributed )
@@ -68,6 +68,21 @@ class PointPoissonProcess(object):
                     [0],  # dy
                     [0]  # dyaw
                 ])
+                # if meas.obj_type == 'bicycle':
+                #     cov = np.diag([0.05390982, 0.05039431, 1.29464435, 0.04560422, 0.04097244, 1.21635902])
+                # elif meas.obj_type == 'bus':
+                #     cov = np.diag([0.17546469, 0.13818929, 0.1979503, 0.13263319, 0.11508148, 0.22529652])
+                # elif meas.obj_type == 'car':
+                #     cov = np.diag([0.08900372, 0.09412005, 1.00535696, 0.08120681, 0.08224643, 0.99492726])
+                # elif meas.obj_type == 'motorcycle':
+                #     cov = np.diag([0.04052819, 0.0398904, 1.06442726, 0.0437039 , 0.04327734, 1.30414345])
+                # elif meas.obj_type == 'pedestrian':
+                #     cov = np.diag([0.03855275, 0.0377111, 2.0751833, 0.04237008, 0.04092393, 2.0059979])
+                # elif meas.obj_type == 'trailer':
+                #     cov = np.diag([0.23228021, 0.22229261, 1.05163481, 0.2138643 , 0.19625241, 0.97082174])
+                # else:
+                #     cov = np.diag([0.14862173, 0.1444596, 0.73122169, 0.10683797, 0.10248689, 0.76188901])
+
                 cov = np.diag([trans_cov, trans_cov, angle_cov, 10, 10, 2*np.pi])
                 self.intensity.append({'w': self.birth_weight,
                                        's': State(mean, cov, meas.obj_type, empty_constructor=False)})

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import multivariate_normal
-from typing import List
+from typing import List, Dict
 
 from utils import normalize_log_weights, put_in_range
 from object_detection import ObjectDetection
@@ -27,17 +27,34 @@ class GaussianDensity(object):
     """
     Hold the functionality of Kalman Filter with linear dynamic & mesurement
     """
-    def __init__(self, state_dim: int, meas_dim: int, F: np.ndarray, Q: np.ndarray, H: np.ndarray, R: np.ndarray):
+    def __init__(self, state_dim: int, meas_dim: int,
+                 F: np.ndarray,
+                 Q: Dict[str, np.ndarray],
+                 H: np.ndarray,
+                 R: Dict[str, np.ndarray]):
+        NUSCENES_TRACKING_NAMES = [
+            'bicycle',
+            'bus',
+            'car',
+            'motorcycle',
+            'pedestrian',
+            'trailer',
+            'truck'
+        ]
+        for k in Q.keys():
+            assert k in NUSCENES_TRACKING_NAMES, 'object {} is not in NUSCENES_TRACKING_NAMES'.format(k)
+        for k in R.keys():
+            assert k in NUSCENES_TRACKING_NAMES, 'object {} is not in NUSCENES_TRACKING_NAMES'.format(k)
         assert F.shape[0] == state_dim, \
             'Incompatible dimension (expect equal): F.shape[0] = {}, state_dim = {}'.format(F.shape[0], state_dim)
-        assert F.shape[0] == Q.shape[0], \
-            'Input error, F and Q have different dim: F.shape = {}, Q.shape = {}'.format(F.shape, Q.shape)
+        assert F.shape[0] == Q['car'].shape[0], \
+            'Input error, F and Q have different dim: F.shape = {}, Q.shape = {}'.format(F.shape, Q['car'].shape)
         assert H.shape[0] == meas_dim, \
             'Incompatible dimension (expect equal): H.shape[0] = {}, meas_dim = {}'.format(H.shape[0], meas_dim)
         assert H.shape[1] == state_dim, \
             'Incompatible dimension (expect equal): H.shape[1] = {}, state_dim = {}'.format(H.shape[1], state_dim)
-        assert H.shape[0] == R.shape[0], \
-            'Input error, H and R have different dim: H.shape = {}, R.shape = {}'.format(H.shape, R.shape)
+        assert H.shape[0] == R['car'].shape[0], \
+            'Input error, H and R have different dim: H.shape = {}, R.shape = {}'.format(H.shape, R['car'].shape)
         self.state_dim = state_dim
         self.meas_dim = meas_dim
         self.F = F
@@ -49,7 +66,7 @@ class GaussianDensity(object):
         # TODO: put predicted yaw in [-pi, pi]
         predicted = State()
         predicted.x = self.F @ state.x
-        predicted.P = self.F @ state.P @ self.F.transpose()
+        predicted.P = self.F @ state.P @ self.F.transpose() + self.Q[state.obj_type]
         predicted.obj_type = state.obj_type
         # put predicted yaw in [-pi, pi]
         predicted.x[2, 0] = put_in_range(predicted.x[2, 0])
@@ -66,7 +83,7 @@ class GaussianDensity(object):
         # TODO: put updated yaw in [-pi, pi]
         assert z.shape[1] == 1, 'measurement is not a column vector: z.shape = {}'.format(z.shape)
         psi = state.P @ self.H.transpose()
-        S = self.H @ state.P @ self.H.transpose() + self.R  # innovation covariance
+        S = self.H @ state.P @ self.H.transpose() + self.R[state.obj_type]  # innovation covariance
         S = (S + S.transpose()) / 2  # numerical stability
         K = psi @ np.linalg.inv(S)  # kalman gain
         updated = State()
@@ -85,7 +102,7 @@ class GaussianDensity(object):
         :return: likelihood
         """
         assert z.shape[1] == 1, 'measurement is not a column vector: z.shape = {}'.format(z.shape)
-        S = self.H @ state.P @ self.H.transpose() + self.R  # innovation covariance
+        S = self.H @ state.P @ self.H.transpose() + self.R[state.obj_type]  # innovation covariance
         S = (S + S.transpose()) / 2  # numerical stability
         mean = self.H @ state.x
         return multivariate_normal.logpdf(z.squeeze(), mean=mean.squeeze(), cov=S)
@@ -98,7 +115,7 @@ class GaussianDensity(object):
         :param gating_size:
         :return: List of index of measurements inside the gate of this this state
         """
-        S = self.H @ state.P @ self.H.transpose() + self.R  # innovation covariance
+        S = self.H @ state.P @ self.H.transpose() + self.R[state.obj_type]  # innovation covariance
         S = (S + S.transpose()) / 2.0  # numerical stability
         inv_S = np.linalg.inv(S)  # cache invert of S
         z_mean = self.H @ state.x
