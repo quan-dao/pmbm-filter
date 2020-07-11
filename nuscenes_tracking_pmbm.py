@@ -1,4 +1,6 @@
 import json
+import argparse
+import os
 import numpy as np
 from datetime import datetime
 
@@ -7,7 +9,7 @@ from pmbm import PoissonMultiBernoulliMixture
 from object_detection import ObjectDetection
 
 
-def main():
+def track_one_scene(detection_file:str):
     np.random.seed(0)
     # initialize filter
     config = FilterConfig(state_dim=6, measurement_dim=3)
@@ -15,7 +17,7 @@ def main():
     pmbm_filter = PoissonMultiBernoulliMixture(config, density)
 
     # get measurements
-    with open('./notebook/fixed-megvii-meausrement-full-scene-0757.json', 'r') as f:
+    with open(detection_file, 'r') as f:
         data = json.load(f)
     all_measurements = data['all_measurements']
     all_classes = data['all_classes']
@@ -47,4 +49,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Render tracking result in one scene of NuScenes.',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--detection_file', type=str, default='fixed-megvii-measurement-full-scene-0757.json',
+                        help='Name of the detection file of the scene you want to track')
+    args = parser.parse_args()
+    pmbm_root = os.getcwd()
+    detection_file = os.path.join(pmbm_root, 'scene-detection', args.detection_file)
+    track_one_scene(detection_file)

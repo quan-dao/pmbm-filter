@@ -1,4 +1,6 @@
 import json
+import os
+import argparse
 from pyquaternion import Quaternion
 import cv2
 import numpy as np
@@ -10,17 +12,27 @@ from nuscenes.utils.geometry_utils import box_in_image, BoxVisibility
 from box_for_track import Box4Track
 
 
-def main():
+def render_tracking_result(estimation_file:str,
+         scene_name: str,
+         version: str,
+         dataroot: str):
+    '''
+    Render tracking result onto CAM_FRONT image
+    :param estimation_file: name of esitmation file produced by nuscens_tracking_pmbm.py
+    :param scene_name: name of the scene whose tracking result is about to be rendered
+    :param version: version of NuScene dataset (mini, trainval, test) the scene to rendered belong to
+    :param dataroot: directory contains NuScenes dataset
+    '''
     # Load tracking data
-    with open('./../estimation-result/estimation-scene-0757-20200710-182258.json') as infile:
+    with open(estimation_file, 'r') as infile:
         all_tracking_result = json.load(infile)
 
     num_unique_colors = 200
     all_color_indicies = np.linspace(0, 1.0, num=num_unique_colors)  # allow up to 200 unique colors
 
     # load NuScenese styff
-    nusc = NuScenes(version='v1.0-mini', dataroot='/home/mqdao/Downloads/nuScene/v1.0-mini', verbose=False)
-    my_scene_token = nusc.field2token('scene', 'name', 'scene-0757')[0]
+    nusc = NuScenes(version=version, dataroot=dataroot, verbose=False)
+    my_scene_token = nusc.field2token('scene', 'name', scene_name)[0]
     my_scene = nusc.get('scene', my_scene_token)
 
     current_time_step = 0
@@ -76,4 +88,23 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    pmbm_root = os.getcwd()
+    parser = argparse.ArgumentParser(description='Render tracking result in one scene of NuScenes.',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--version', type=str, default='v1.0-mini',
+                        help='Which dataset split the scene to render belong to (mini, trainval, test)')
+    parser.add_argument('--dataroot', type=str, default='/home/mqdao/Downloads/nuScene/v1.0-mini',
+                        help='Directory contains NuScenes dataset')
+    parser.add_argument('--estimation_file', type=str, default='estimation-scene-0757-20200709-123722.json',
+                        help='Name of estimation file created by nuscenes_tracking_pmbm.py')
+    parser.add_argument('--scene_name', type=str, default='scene-0757',
+                        help='Name of the scene whose tracking result is about to be rendered')
+    args = parser.parse_args()
+
+    version = args.version
+    dataroot = args.dataroot
+    estimation_file = os.path.join(pmbm_root, 'estimation-result', args.estimation_file)
+    scene_name = args.scene_name
+
+    render_tracking_result(estimation_file, scene_name, version, dataroot)
+
