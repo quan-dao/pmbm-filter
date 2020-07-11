@@ -84,7 +84,8 @@ class PointPoissonProcess(object):
                 #     cov = np.diag([0.14862173, 0.1444596, 0.73122169, 0.10683797, 0.10248689, 0.76188901])
 
                 cov = np.diag([trans_cov, trans_cov, angle_cov, 10, 10, 2*np.pi])
-                self.intensity.append({'w': self.birth_weight,
+                weight = np.log(meas.score)
+                self.intensity.append({'w': self.birth_weight,  # self.birth_weight
                                        's': State(mean, cov, meas.obj_type, empty_constructor=False)})
 
     def predict(self, measurements: List[ObjectDetection]) -> None:

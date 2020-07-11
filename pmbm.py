@@ -357,6 +357,7 @@ class PoissonMultiBernoulliMixture(object):
                     'velocity': [state.x[3, 0], state.x[4, 0]],  # vx, vy
                     'score': measurements[i_meas].score
                 }
+
         # self.estimation_result = {self.current_time_step: estimation}
 
         # clean up new_targets id in global hypotheses

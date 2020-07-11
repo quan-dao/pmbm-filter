@@ -50,12 +50,12 @@ def format_result(sample_token: str,
 
 def main():
     # load NuScenes
-    data_root = '/home/mqdao/Downloads/nuScene/v1.0-trainval'
-    version = 'v1.0-trainval'
+    data_root = '/home/mqdao/Downloads/nuScene/v1.0-test'
+    version = 'v1.0-test'
     nusc = NuScenes(version=version, dataroot=data_root, verbose=True)
 
     # load scene token
-    with open('val_scene_tokens.json', 'r') as infile:
+    with open('test_scene_tokens_centerPoint.json', 'r') as infile:
         val_scene_tokens = json.load(infile)
 
     # init tracking results for the whole val set
@@ -63,7 +63,7 @@ def main():
 
     for _, scene_token in tqdm(val_scene_tokens.items()):
         # get measurements
-        with open('./megvii-per-scene-detection/val/{}.json'.format(scene_token), 'r') as f:
+        with open('./centerPoint-per-scene-detection/test/{}.json'.format(scene_token), 'r') as f:
             data = json.load(f)
         all_measurements = data['all_measurements']
         all_classes = data['all_classes']
