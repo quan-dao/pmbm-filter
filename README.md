@@ -36,7 +36,37 @@ multi-object tracking in 3D projected onto CAM_FRONT image.
 ## Using This Repo
 
 ### Installation
-%TODO
+First, clone the repository containing a Python wrapper for implementation of Murty's algorithm
+
+```
+git clone --recursive git@github.com:erikbohnsack/murty.git
+```
+
+**Before building** this wrapper, comment out line 5 to line 8 of CMakeLists.txt. Next, in the `murty` directory (that 
+is just cloned)
+
+```
+mkdir build
+cd build
+cmake ..
+make
+```
+
+A `.so` file will be created. (for me this file named: murty.cpython-36m-x86_64-linux-gnu). 
+
+Clone this repo
+
+```
+git clone https://github.com/quan-dao/pmbm-filter
+```
+
+Then copy the `.so` file created previously to `pmbm-filter` directory. Finally, install NuScenes devkit
+
+```
+git clone https://github.com/nutonomy/nuscenes-devkit.git
+cd nuscenes-devkit
+pip install -r setup/requirements.txt
+```
 
 ### Tracking In 1 Scene
 This is to create a demonstration of tracking in one scene of NuScenes. First, extract all object detection of this scene
