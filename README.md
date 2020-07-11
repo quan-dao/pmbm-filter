@@ -103,3 +103,7 @@ python nuscenes_tracking_pmbm_full_speed_up.py
 ```
 
 This can take up to 45 minutes.
+
+## Acknowledgement
+The implementation here is inpsired by https://github.com/erikbohnsack/pmbm in the way of organizing global hypotheses.
+In addition, the covariance of motion model for each class of tracking objects is originated from [StanfordIPRL-TRI](https://github.com/eddyhkchiu/mahalanobis_3d_multi_object_tracking)
