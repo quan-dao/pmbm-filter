@@ -93,7 +93,7 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--version', type=str, default='v1.0-mini',
                         help='Which dataset split the scene to render belong to (mini, trainval, test)')
-    parser.add_argument('--dataroot', type=str, default='/home/mqdao/Downloads/nuScene/v1.0-mini',
+    parser.add_argument('--dataroot', type=str, default='nuScene/v1.0-mini',
                         help='Directory contains NuScenes dataset')
     parser.add_argument('--estimation_file', type=str, default='estimation-scene-0757-20200709-123722.json',
                         help='Name of estimation file created by nuscenes_tracking_pmbm.py')
